@@ -1,0 +1,19 @@
+# Dependencies (downloaded, never committed)
+node_modules/
+
+# Secrets — never commit real environment files
+.env
+*.env
+!*.env.example
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
