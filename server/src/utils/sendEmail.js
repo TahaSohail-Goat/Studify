@@ -1,14 +1,16 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Gmail App Password (not your login password)
-  },
-});
-
+// Transporter is created inside the function (not at module scope) so that
+// process.env vars are guaranteed to be loaded by dotenv before we read them.
 export async function sendOtpEmail(toEmail, code) {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
   await transporter.sendMail({
     from: `"Studyify" <${process.env.EMAIL_USER}>`,
     to: toEmail,
@@ -27,7 +29,6 @@ export async function sendOtpEmail(toEmail, code) {
         <table width="480" cellpadding="0" cellspacing="0"
           style="background:#1a100a;border-radius:20px;border:1px solid rgba(201,164,122,0.2);
                  box-shadow:0 24px 64px rgba(0,0,0,0.5);">
-          <!-- Header -->
           <tr>
             <td align="center" style="padding:36px 40px 24px;">
               <div style="display:inline-block;background:linear-gradient(135deg,#c9a47a,#ddbf9b);
@@ -41,7 +42,6 @@ export async function sendOtpEmail(toEmail, code) {
               </p>
             </td>
           </tr>
-          <!-- OTP code -->
           <tr>
             <td align="center" style="padding:8px 40px 32px;">
               <div style="display:inline-block;background:rgba(201,164,122,0.1);
@@ -55,7 +55,6 @@ export async function sendOtpEmail(toEmail, code) {
               </p>
             </td>
           </tr>
-          <!-- Footer -->
           <tr>
             <td style="padding:20px 40px 32px;border-top:1px solid rgba(245,235,224,0.08);">
               <p style="margin:0;font-size:12px;color:#7a6a5e;text-align:center;">

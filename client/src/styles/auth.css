@@ -526,6 +526,27 @@
   background: rgba(245, 235, 224, 0.04);
 }
 
+/* ── Step indicators (email badge + highlight) ──────────────────────────── */
+.highlight-email {
+  color: var(--tan);
+  font-weight: 600;
+}
+
+.verified-email-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(201, 164, 122, 0.1);
+  border: 1px solid rgba(201, 164, 122, 0.3);
+  color: var(--tan-soft);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* ── Responsive tweaks ───────────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .auth-card {

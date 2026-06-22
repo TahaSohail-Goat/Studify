@@ -1,75 +1,103 @@
-// ── Dashboard ────────────────────────────────────────────────────────────────
-// The first screen you see after logging in. For now it greets you and shows
-// placeholder cards for the features we'll build in the coming phases.
-
-import {
-  GraduationCap,
-  Upload,
-  MessagesSquare,
-  ScrollText,
-  Brain,
-  BarChart3,
-  LogOut,
-} from "lucide-react";
+import { Link } from "react-router-dom";
+import { BookOpen, MessageSquare, ScrollText, Brain, BarChart3, Upload } from "lucide-react";
+import AppLayout from "../components/AppLayout.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const FEATURES = [
-  { Icon: Upload, title: "Upload Notes", desc: "Add PDFs and notes", soon: "Phase 2" },
-  { Icon: MessagesSquare, title: "Chat with Notes", desc: "Ask questions, get answers", soon: "Phase 4" },
-  { Icon: ScrollText, title: "Summaries", desc: "Auto-condense your material", soon: "Phase 5" },
-  { Icon: Brain, title: "Quizzes", desc: "Test yourself automatically", soon: "Phase 5" },
-  { Icon: BarChart3, title: "Analytics", desc: "Track your progress", soon: "Phase 6" },
+  {
+    to: "/notes",
+    icon: Upload,
+    name: "Upload Notes",
+    desc: "Upload PDFs or paste text and Studyify will index them for AI search.",
+    badge: "Phase 2",
+  },
+  {
+    to: "/chat",
+    icon: MessageSquare,
+    name: "AI Chat",
+    desc: "Ask anything about your notes. Get precise, cited answers instantly.",
+    badge: "Phase 3",
+  },
+  {
+    to: "/summaries",
+    icon: ScrollText,
+    name: "Summaries",
+    desc: "One-click summary of any note or PDF using Gemini AI.",
+    badge: "Phase 4",
+  },
+  {
+    to: "/quizzes",
+    icon: Brain,
+    name: "Quiz Generator",
+    desc: "Auto-generate quizzes from your material to test your knowledge.",
+    badge: "Phase 5",
+  },
+  {
+    to: "/notes",
+    icon: BookOpen,
+    name: "My Notes",
+    desc: "Browse, search, and manage all your uploaded study materials.",
+    badge: "Phase 2",
+  },
+  {
+    to: "/analytics",
+    icon: BarChart3,
+    name: "Analytics",
+    desc: "Track your study streaks, quiz scores, and AI usage over time.",
+    badge: "Phase 6",
+  },
 ];
 
+const STATS = [
+  { icon: BookOpen,      value: "0", label: "Notes uploaded" },
+  { icon: MessageSquare, value: "0", label: "AI conversations" },
+  { icon: ScrollText,    value: "0", label: "Summaries made" },
+  { icon: Brain,         value: "0", label: "Quizzes taken" },
+];
+
+function greeting(name) {
+  const h = new Date().getHours();
+  const part = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
+  return `Good ${part}, ${name?.split(" ")[0] || "there"}`;
+}
+
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   return (
-    <div className="dash">
-      {/* background orbs reused from the auth screens */}
-      <div className="orb orb--1" />
-      <div className="orb orb--2" />
+    <AppLayout title="Dashboard">
+      <div className="page-header">
+        <h1>{greeting(user?.name)}</h1>
+        <p>Here's an overview of your Studyify workspace.</p>
+      </div>
 
-      <header className="dash__header">
-        <div className="auth-brand">
-          <span className="auth-brand__logo">
-            <GraduationCap size={20} strokeWidth={2.2} />
-          </span>
-          <span className="auth-brand__name">Studyify</span>
-        </div>
-        <div className="dash__user">
-          <div className="dash__avatar">
-            {user?.name?.charAt(0).toUpperCase() || "?"}
-          </div>
-          <span className="dash__name">{user?.name}</span>
-          <button className="btn-ghost" onClick={logout}>
-            <LogOut size={16} />
-            Log out
-          </button>
-        </div>
-      </header>
-
-      <main className="dash__main">
-        <h1 className="dash__greeting">
-          Welcome, {user?.name?.split(" ")[0] || "there"}
-        </h1>
-        <p className="dash__sub">
-          You're logged in. Your study tools will appear here as we build them.
-        </p>
-
-        <div className="feature-grid">
-          {FEATURES.map(({ Icon, title, desc, soon }) => (
-            <div className="feature-card" key={title}>
-              <div className="feature-card__icon">
-                <Icon size={24} strokeWidth={1.9} />
-              </div>
-              <h3 className="feature-card__title">{title}</h3>
-              <p className="feature-card__desc">{desc}</p>
-              <span className="feature-card__badge">Coming · {soon}</span>
+      {/* Stats row */}
+      <div className="stat-row">
+        {STATS.map(({ icon: Icon, value, label }) => (
+          <div className="stat-card" key={label}>
+            <div className="stat-card__icon">
+              <Icon size={18} />
             </div>
-          ))}
-        </div>
-      </main>
-    </div>
+            <div className="stat-card__value">{value}</div>
+            <div className="stat-card__label">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Feature cards */}
+      <p className="section-title">Features</p>
+      <div className="feature-grid-app">
+        {FEATURES.map(({ to, icon: Icon, name, desc, badge }) => (
+          <Link key={name} to={to} className="feature-card-app">
+            <div className="feature-card-app__icon">
+              <Icon size={20} />
+            </div>
+            <div className="feature-card-app__name">{name}</div>
+            <div className="feature-card-app__desc">{desc}</div>
+            <span className="feature-card-app__badge">{badge}</span>
+          </Link>
+        ))}
+      </div>
+    </AppLayout>
   );
 }

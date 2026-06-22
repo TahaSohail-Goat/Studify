@@ -9,28 +9,29 @@ import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// ── Helper ────────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function generateOtp() {
-  // Cryptographically random 6-digit code, zero-padded (e.g. "047291").
   return String(crypto.randomInt(0, 999999)).padStart(6, "0");
 }
 
-function signToken(userId) {
+function signAuthToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 }
 
-// ── POST /api/auth/register ───────────────────────────────────────────────────
-// Step 1: validate input → check email not taken → send OTP.
-// We do NOT create the user yet — only after they verify the OTP.
-router.post("/register", async (req, res) => {
+// A short-lived token that proves "this email was verified by OTP".
+// Passed from the verify step to the complete-signup step.
+function signVerifiedToken(email) {
+  return jwt.sign({ email, type: "email_verified" }, process.env.JWT_SECRET, {
+    expiresIn: "15m",
+  });
+}
+
+// ── POST /api/auth/send-otp ───────────────────────────────────────────────────
+// Step 1: user enters email → we send them a code.
+router.post("/send-otp", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password)
-      return res.status(400).json({ message: "Name, email, and password are all required." });
-
-    if (password.length < 6)
-      return res.status(400).json({ message: "Password must be at least 6 characters." });
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required." });
 
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing)
@@ -38,7 +39,6 @@ router.post("/register", async (req, res) => {
 
     const code = generateOtp();
 
-    // Upsert: replace any previous OTP for this email so there's only ever one.
     await OtpCode.findOneAndUpdate(
       { email: email.toLowerCase() },
       { code, createdAt: new Date() },
@@ -47,50 +47,82 @@ router.post("/register", async (req, res) => {
 
     await sendOtpEmail(email, code);
 
-    res.json({ message: "Verification code sent to your email." });
+    res.json({ message: "Verification code sent." });
   } catch (err) {
-    console.error("Register error:", err);
-    res.status(500).json({ message: "Could not send verification email. Check your email settings." });
+    console.error("send-otp error:", err.message);
+    res.status(500).json({
+      message: "Could not send email. Make sure EMAIL_USER and EMAIL_PASS are set correctly in .env.",
+      detail: err.message,
+    });
   }
 });
 
 // ── POST /api/auth/verify-otp ─────────────────────────────────────────────────
-// Step 2: user submits the 6-digit code.
-// If valid → create the account → return JWT (auto log-in).
+// Step 2: user submits the 6-digit code → we return a short-lived "verified" token.
+// No account is created here yet.
 router.post("/verify-otp", async (req, res) => {
   try {
-    const { name, email, password, code } = req.body;
-
-    if (!name || !email || !password || !code)
-      return res.status(400).json({ message: "All fields are required." });
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ message: "Email and code are required." });
 
     const record = await OtpCode.findOne({ email: email.toLowerCase() });
-
     if (!record || record.code !== code)
       return res.status(400).json({ message: "Invalid or expired code. Try resending." });
 
-    // Code is correct — delete it so it can't be reused.
+    // Delete the OTP so it cannot be reused.
     await OtpCode.deleteOne({ _id: record._id });
 
-    // Create the verified account now.
+    res.json({ verifiedToken: signVerifiedToken(email) });
+  } catch (err) {
+    console.error("verify-otp error:", err.message);
+    res.status(500).json({ message: "Something went wrong. Please try again." });
+  }
+});
+
+// ── POST /api/auth/complete-signup ────────────────────────────────────────────
+// Step 3: user provides name + password. We verify their "email verified" token,
+// then create the account and return a full auth token.
+router.post("/complete-signup", async (req, res) => {
+  try {
+    const { verifiedToken, name, password } = req.body;
+    if (!verifiedToken || !name || !password)
+      return res.status(400).json({ message: "All fields are required." });
+
+    if (password.length < 6)
+      return res.status(400).json({ message: "Password must be at least 6 characters." });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(verifiedToken, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ message: "Verification expired. Please start over." });
+    }
+
+    if (decoded.type !== "email_verified")
+      return res.status(401).json({ message: "Invalid verification token." });
+
+    const { email } = decoded;
+
+    // Guard against race condition (someone registered with this email between steps).
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing)
+      return res.status(409).json({ message: "This email is already registered." });
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hashedPassword });
 
-    const token = signToken(user._id);
-
     res.status(201).json({
-      message: "Account verified and created!",
-      token,
+      message: "Account created!",
+      token: signAuthToken(user._id),
       user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
-    console.error("Verify OTP error:", err);
+    console.error("complete-signup error:", err.message);
     res.status(500).json({ message: "Something went wrong. Please try again." });
   }
 });
 
 // ── POST /api/auth/resend-otp ─────────────────────────────────────────────────
-// User can request a fresh code without re-filling the form.
 router.post("/resend-otp", async (req, res) => {
   try {
     const { email } = req.body;
@@ -110,7 +142,7 @@ router.post("/resend-otp", async (req, res) => {
     await sendOtpEmail(email, code);
     res.json({ message: "A new code has been sent." });
   } catch (err) {
-    console.error("Resend OTP error:", err);
+    console.error("resend-otp error:", err.message);
     res.status(500).json({ message: "Could not resend code. Please try again." });
   }
 });
@@ -119,7 +151,6 @@ router.post("/resend-otp", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password)
       return res.status(400).json({ message: "Email and password are required." });
 
@@ -132,12 +163,35 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password." });
 
     res.json({
-      message: "Logged in successfully!",
-      token: signToken(user._id),
+      token: signAuthToken(user._id),
       user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
-    console.error("Login error:", err);
+    console.error("login error:", err.message);
+    res.status(500).json({ message: "Something went wrong. Please try again." });
+  }
+});
+
+// ── PUT /api/auth/change-password ────────────────────────────────────────────
+router.put("/change-password", requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword)
+      return res.status(400).json({ message: "Both passwords are required." });
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: "New password must be at least 6 characters." });
+
+    const user = await User.findById(req.userId);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch)
+      return res.status(401).json({ message: "Current password is incorrect." });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ message: "Password changed successfully." });
+  } catch (err) {
+    console.error("change-password error:", err.message);
     res.status(500).json({ message: "Something went wrong. Please try again." });
   }
 });

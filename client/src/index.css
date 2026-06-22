@@ -1,22 +1,74 @@
 /* ── Base / reset ─────────────────────────────────────────────────────────── */
 
 :root {
-  /* Warm dark-brown + cream palette */
+  /* Auth pages — always dark brown / cream (never themed) */
   --espresso: #150d08;
   --bg-2: #20140d;
   --brown: #5a3c27;
   --brown-soft: #7a5538;
-  --tan: #c9a47a;        /* accent */
+  --tan: #c9a47a;
   --tan-soft: #ddbf9b;
   --cream: #f4ece2;
-
   --text: #f3eae0;
   --text-dim: #b6a392;
 
+  /* App layout — dark defaults */
+  --app-page-bg: #0e0906;
+  --app-sidebar-bg: #150d08;
+  --app-sidebar-border: rgba(201, 164, 122, 0.12);
+  --app-header-bg: rgba(21, 13, 8, 0.96);
+  --app-header-border: rgba(201, 164, 122, 0.1);
+  --app-card-bg: #1c1208;
+  --app-card-border: rgba(245, 235, 224, 0.07);
+  --app-text: #f3eae0;
+  --app-text-dim: #b6a392;
+  --app-text-faint: #7a6a5e;
+  --app-accent: #c9a47a;
+  --app-accent-muted: rgba(201, 164, 122, 0.14);
+  --app-hover: rgba(255, 255, 255, 0.04);
+  --app-nav-active-bg: rgba(201, 164, 122, 0.1);
+  --app-nav-active-border: #c9a47a;
+  --app-input-bg: rgba(255, 255, 255, 0.05);
+  --app-input-border: rgba(245, 235, 224, 0.14);
+  --app-input-focus: rgba(201, 164, 122, 0.7);
+  --app-badge-bg: rgba(201, 164, 122, 0.12);
+  --app-badge-text: #ddbf9b;
+  --app-danger: #e57373;
+  --app-danger-muted: rgba(229, 115, 115, 0.12);
+  --app-success: #81c784;
+  --app-success-muted: rgba(129, 199, 132, 0.12);
+
   font-family: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
-  color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Light theme overrides — only --app-* vars change */
+[data-theme="light"] {
+  --app-page-bg: #ede5da;
+  --app-sidebar-bg: #faf5ef;
+  --app-sidebar-border: rgba(90, 60, 39, 0.12);
+  --app-header-bg: rgba(250, 245, 239, 0.97);
+  --app-header-border: rgba(90, 60, 39, 0.1);
+  --app-card-bg: #ffffff;
+  --app-card-border: rgba(90, 60, 39, 0.08);
+  --app-text: #1c0f06;
+  --app-text-dim: #7a5f4a;
+  --app-text-faint: #b09080;
+  --app-accent: #8b5230;
+  --app-accent-muted: rgba(139, 82, 48, 0.1);
+  --app-hover: rgba(0, 0, 0, 0.04);
+  --app-nav-active-bg: rgba(139, 82, 48, 0.08);
+  --app-nav-active-border: #8b5230;
+  --app-input-bg: rgba(0, 0, 0, 0.04);
+  --app-input-border: rgba(90, 60, 39, 0.18);
+  --app-input-focus: rgba(139, 82, 48, 0.6);
+  --app-badge-bg: rgba(139, 82, 48, 0.1);
+  --app-badge-text: #8b5230;
+  --app-danger: #c62828;
+  --app-danger-muted: rgba(198, 40, 40, 0.08);
+  --app-success: #2e7d32;
+  --app-success-muted: rgba(46, 125, 50, 0.08);
 }
 
 * {
@@ -30,8 +82,8 @@ body,
   min-height: 100%;
 }
 
+/* Auth pages always use the dark gradient background */
 body {
-  /* Warm, rich brown gradient base behind everything */
   background: radial-gradient(
       1200px 800px at 15% 10%,
       #3a2416 0%,
