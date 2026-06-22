@@ -1,101 +1,139 @@
-// ── Auth routes ──────────────────────────────────────────────────────────────
-// Everything about accounts: registering now, logging in next (step 1.3).
-
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "node:crypto";
 import { User } from "../models/User.js";
+import { OtpCode } from "../models/OtpCode.js";
+import { sendOtpEmail } from "../utils/sendEmail.js";
 import { requireAuth } from "../middleware/auth.js";
 
-// A "router" is a mini collection of routes we'll plug into the main app.
 const router = express.Router();
 
-// POST /api/auth/register  → create a new account
+// ── Helper ────────────────────────────────────────────────────────────────────
+function generateOtp() {
+  // Cryptographically random 6-digit code, zero-padded (e.g. "047291").
+  return String(crypto.randomInt(0, 999999)).padStart(6, "0");
+}
+
+function signToken(userId) {
+  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+}
+
+// ── POST /api/auth/register ───────────────────────────────────────────────────
+// Step 1: validate input → check email not taken → send OTP.
+// We do NOT create the user yet — only after they verify the OTP.
 router.post("/register", async (req, res) => {
   try {
-    // req.body holds the JSON the frontend sent us (name, email, password).
     const { name, email, password } = req.body;
 
-    // 1) Basic validation — never trust incoming data.
-    if (!name || !email || !password) {
-      return res
-        .status(400) // 400 = "Bad Request" (the client sent something invalid)
-        .json({ message: "Name, email, and password are all required." });
-    }
-    if (password.length < 6) {
-      return res
-        .status(400)
-        .json({ message: "Password must be at least 6 characters." });
-    }
+    if (!name || !email || !password)
+      return res.status(400).json({ message: "Name, email, and password are all required." });
 
-    // 2) Make sure this email isn't already taken.
+    if (password.length < 6)
+      return res.status(400).json({ message: "Password must be at least 6 characters." });
+
     const existing = await User.findOne({ email: email.toLowerCase() });
-    if (existing) {
-      return res
-        .status(409) // 409 = "Conflict" (it already exists)
-        .json({ message: "An account with this email already exists." });
-    }
+    if (existing)
+      return res.status(409).json({ message: "An account with this email already exists." });
 
-    // 3) Scramble (hash) the password before saving. 10 = how much work bcrypt does.
+    const code = generateOtp();
+
+    // Upsert: replace any previous OTP for this email so there's only ever one.
+    await OtpCode.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      { code, createdAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    await sendOtpEmail(email, code);
+
+    res.json({ message: "Verification code sent to your email." });
+  } catch (err) {
+    console.error("Register error:", err);
+    res.status(500).json({ message: "Could not send verification email. Check your email settings." });
+  }
+});
+
+// ── POST /api/auth/verify-otp ─────────────────────────────────────────────────
+// Step 2: user submits the 6-digit code.
+// If valid → create the account → return JWT (auto log-in).
+router.post("/verify-otp", async (req, res) => {
+  try {
+    const { name, email, password, code } = req.body;
+
+    if (!name || !email || !password || !code)
+      return res.status(400).json({ message: "All fields are required." });
+
+    const record = await OtpCode.findOne({ email: email.toLowerCase() });
+
+    if (!record || record.code !== code)
+      return res.status(400).json({ message: "Invalid or expired code. Try resending." });
+
+    // Code is correct — delete it so it can't be reused.
+    await OtpCode.deleteOne({ _id: record._id });
+
+    // Create the verified account now.
     const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({ name, email, password: hashedPassword });
 
-    // 4) Save the new user to MongoDB.
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-    });
+    const token = signToken(user._id);
 
-    // 5) Respond with the new user — but NEVER send the password back.
     res.status(201).json({
-      message: "Account created successfully!",
+      message: "Account verified and created!",
+      token,
       user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
-    console.error("Register error:", err);
+    console.error("Verify OTP error:", err);
     res.status(500).json({ message: "Something went wrong. Please try again." });
   }
 });
 
-// POST /api/auth/login  → check credentials and hand back a JWT
+// ── POST /api/auth/resend-otp ─────────────────────────────────────────────────
+// User can request a fresh code without re-filling the form.
+router.post("/resend-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required." });
+
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing)
+      return res.status(409).json({ message: "This email is already registered." });
+
+    const code = generateOtp();
+    await OtpCode.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      { code, createdAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    await sendOtpEmail(email, code);
+    res.json({ message: "A new code has been sent." });
+  } catch (err) {
+    console.error("Resend OTP error:", err);
+    res.status(500).json({ message: "Could not resend code. Please try again." });
+  }
+});
+
+// ── POST /api/auth/login ──────────────────────────────────────────────────────
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password are required." });
-    }
+    if (!email || !password)
+      return res.status(400).json({ message: "Email and password are required." });
 
-    // Find the user by email.
     const user = await User.findOne({ email: email.toLowerCase() });
-
-    // Security note: whether the email doesn't exist OR the password is wrong,
-    // we return the SAME vague message. This stops attackers from discovering
-    // which emails are registered.
-    if (!user) {
+    if (!user)
       return res.status(401).json({ message: "Invalid email or password." });
-    }
 
-    // bcrypt.compare re-hashes the typed password and checks it against the
-    // stored hash — without ever un-scrambling the stored one.
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    if (!isMatch)
       return res.status(401).json({ message: "Invalid email or password." });
-    }
-
-    // Credentials are good → create the "wristband" (JWT).
-    // We bake the user's id into it and sign it with our secret.
-    const token = jwt.sign(
-      { userId: user._id },        // the payload (data inside the token)
-      process.env.JWT_SECRET,      // the secret seal — only our server knows it
-      { expiresIn: "7d" }          // the wristband stops working after 7 days
-    );
 
     res.json({
       message: "Logged in successfully!",
-      token,
+      token: signToken(user._id),
       user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
@@ -104,16 +142,10 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// GET /api/auth/me  → who am I? (a PROTECTED route)
-// `requireAuth` runs first; it only lets the request through if a valid token
-// was sent. Then we look up and return the logged-in user.
+// ── GET /api/auth/me ──────────────────────────────────────────────────────────
 router.get("/me", requireAuth, async (req, res) => {
-  // requireAuth attached req.userId for us. ".select('-password')" means
-  // "give me everything EXCEPT the password field".
   const user = await User.findById(req.userId).select("-password");
-  if (!user) {
-    return res.status(404).json({ message: "User not found." });
-  }
+  if (!user) return res.status(404).json({ message: "User not found." });
   res.json({ user });
 });
 

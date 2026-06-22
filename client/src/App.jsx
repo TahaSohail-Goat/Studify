@@ -1,37 +1,34 @@
-// ── Studyify frontend: our first React page ──────────────────────────────────
-// This page talks to our backend's /api/health route and shows the result.
+// ── App: the route map ───────────────────────────────────────────────────────
+// Decides which page to show for each URL path.
 
-import { useState, useEffect } from "react";
-import "./App.css";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login.jsx";
+import Signup from "./pages/Signup.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
-// The address of our backend. Later we'll move this into a config file.
-const API_URL = "http://localhost:5000";
-
-function App() {
-  // "state" = data React remembers and re-draws the screen when it changes.
-  // `status` holds what we want to show the user; `setStatus` updates it.
-  const [status, setStatus] = useState("Checking connection to the server...");
-
-  // useEffect runs code *after* the page first appears. We use it to fetch data.
-  useEffect(() => {
-    // Ask the backend's health route if it's alive.
-    fetch(`${API_URL}/api/health`)
-      .then((response) => response.json()) // turn the JSON text into a JS object
-      .then((data) => {
-        setStatus(`✅ Connected to backend! Server says: "${data.status}"`);
-      })
-      .catch(() => {
-        setStatus("❌ Could not reach the server. Is it running on port 5000?");
-      });
-  }, []); // the empty [] means "run this only once, when the page loads"
-
+export default function App() {
   return (
-    <div className="App">
-      <h1>📚 Studyify</h1>
-      <p>Your AI-powered study companion</p>
-      <div className="status-card">{status}</div>
-    </div>
+    <Routes>
+      {/* Visiting "/" sends you to login (which itself bounces to the dashboard
+          if you're already logged in). */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+
+      {/* The dashboard is wrapped so only logged-in users can reach it. */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Any unknown URL → back to login. */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
   );
 }
-
-export default App;
