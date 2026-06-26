@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { BookOpen, MessageSquare, ScrollText, Brain, BarChart3, Upload } from "lucide-react";
+import {
+  BookOpen, MessageSquare, ScrollText, Brain, BarChart3, Upload, ArrowRight,
+} from "lucide-react";
 import AppLayout from "../components/AppLayout.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { getNotesApi } from "../api/notes.js";
+import { getConversationsApi } from "../api/chat.js";
 
 const FEATURES = [
   {
@@ -24,7 +27,7 @@ const FEATURES = [
     to: "/summaries",
     icon: ScrollText,
     name: "Summaries",
-    desc: "One-click summary of any note or PDF using Gemini AI.",
+    desc: "One-click summary of any note or PDF using AI.",
     badge: "Phase 4",
   },
   {
@@ -58,19 +61,28 @@ function greeting(name) {
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [noteCount, setNoteCount] = useState("…");
+  const [noteCount, setNoteCount]     = useState("…");
+  const [convoCount, setConvoCount]   = useState("…");
+  const [recentChats, setRecentChats] = useState([]);
 
   useEffect(() => {
     getNotesApi()
       .then((data) => setNoteCount(data.notes.length))
       .catch(() => setNoteCount(0));
+
+    getConversationsApi()
+      .then((data) => {
+        setConvoCount(data.conversations.length);
+        setRecentChats(data.conversations.slice(0, 4));
+      })
+      .catch(() => setConvoCount(0));
   }, []);
 
   const STATS = [
-    { icon: BookOpen,      value: String(noteCount), label: "Notes uploaded" },
-    { icon: MessageSquare, value: "0",               label: "AI conversations" },
-    { icon: ScrollText,    value: "0",               label: "Summaries made" },
-    { icon: Brain,         value: "0",               label: "Quizzes taken" },
+    { icon: BookOpen,      value: String(noteCount),  label: "Notes uploaded" },
+    { icon: MessageSquare, value: String(convoCount), label: "AI conversations" },
+    { icon: ScrollText,    value: "0",                label: "Summaries made" },
+    { icon: Brain,         value: "0",                label: "Quizzes taken" },
   ];
 
   return (
@@ -92,6 +104,22 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Recent conversations — links straight back into the chat */}
+      {recentChats.length > 0 && (
+        <>
+          <p className="section-title">Jump back in</p>
+          <div className="recent-chats">
+            {recentChats.map((c) => (
+              <Link key={c._id} to={`/chat?c=${c._id}`} className="recent-chat">
+                <MessageSquare size={16} className="recent-chat__icon" />
+                <span className="recent-chat__title">{c.title}</span>
+                <ArrowRight size={15} className="recent-chat__arrow" />
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Feature cards */}
       <p className="section-title">Features</p>

@@ -385,6 +385,42 @@ body:has(.app-root) {
   letter-spacing: 0.6px;
   margin: 0 0 14px;
 }
+/* Recent conversations ("Jump back in") */
+.recent-chats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.recent-chat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-card-border);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--app-text);
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.recent-chat:hover {
+  border-color: var(--app-accent);
+  background: var(--app-hover);
+  transform: translateY(-1px);
+}
+.recent-chat__icon { color: var(--app-accent); flex-shrink: 0; }
+.recent-chat__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-chat__arrow { color: var(--app-text-faint); flex-shrink: 0; }
+
 .feature-grid-app {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

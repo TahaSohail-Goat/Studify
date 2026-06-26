@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -42,6 +43,8 @@ export default function Chat() {
   const [copiedIdx, setCopiedIdx]         = useState(null);
   const [atBottom, setAtBottom]           = useState(true);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const threadRef    = useRef(null);
   const threadEndRef = useRef(null);
   const inputRef     = useRef(null);
@@ -64,6 +67,16 @@ export default function Chat() {
     getConversationsApi()
       .then(({ conversations }) => setConversations(conversations))
       .catch(() => {});
+  }, []);
+
+  // Deep-link: /chat?c=<id> (e.g. from the dashboard) opens that conversation.
+  useEffect(() => {
+    const cid = searchParams.get("c");
+    if (cid) {
+      openConversation(cid);
+      setSearchParams({}, { replace: true }); // tidy the URL afterwards
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Grow the textarea with its content (up to a cap), like ChatGPT.
@@ -104,7 +117,14 @@ export default function Chat() {
       const { conversation } = await getConversationApi(id);
       setActiveId(conversation._id);
       setMessages(conversation.messages);
-      if (conversation.model) setSelectedModel(conversation.model);
+      // Only adopt the saved model if it's still one we offer (a chat created
+      // with a since-removed model keeps the current selection instead).
+      setModels((curr) => {
+        if (conversation.model && curr.some((m) => m.id === conversation.model)) {
+          setSelectedModel(conversation.model);
+        }
+        return curr;
+      });
       atBottomRef.current = true;
     } catch (err) {
       setError(err.message);
