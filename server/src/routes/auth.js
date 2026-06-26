@@ -7,6 +7,7 @@ import path from "node:path";
 import { User } from "../models/User.js";
 import { OtpCode } from "../models/OtpCode.js";
 import { Note } from "../models/Note.js";
+import { Summary } from "../models/Summary.js";
 import { UPLOADS_DIR, AVATARS_DIR, avatarUpload } from "../middleware/upload.js";
 import { sendOtpEmail } from "../utils/sendEmail.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -318,6 +319,7 @@ router.delete("/delete-account", requireAuth, async (req, res) => {
     }
     // ...then the database records.
     await Note.deleteMany({ userId: req.userId });
+    await Summary.deleteMany({ userId: req.userId });
     await User.findByIdAndDelete(req.userId);
     res.json({ message: "Account deleted." });
   } catch (err) {

@@ -2,6 +2,7 @@ import express from "express";
 import path from "node:path";
 import fs from "node:fs";
 import { Note } from "../models/Note.js";
+import { Summary } from "../models/Summary.js";
 import { upload, UPLOADS_DIR } from "../middleware/upload.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -65,6 +66,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
 
     fs.unlink(path.join(UPLOADS_DIR, note.storedName), () => {});
     await Note.deleteOne({ _id: note._id });
+    await Summary.deleteOne({ noteId: note._id }); // drop its summary too
     res.json({ message: "Note deleted." });
   } catch (err) {
     console.error("delete note error:", err.message);

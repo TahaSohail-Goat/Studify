@@ -7,6 +7,7 @@ import AppLayout from "../components/AppLayout.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { getNotesApi } from "../api/notes.js";
 import { getConversationsApi } from "../api/chat.js";
+import { getSummariesApi } from "../api/summaries.js";
 
 const FEATURES = [
   {
@@ -61,9 +62,10 @@ function greeting(name) {
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [noteCount, setNoteCount]     = useState("…");
-  const [convoCount, setConvoCount]   = useState("…");
-  const [recentChats, setRecentChats] = useState([]);
+  const [noteCount, setNoteCount]       = useState("…");
+  const [convoCount, setConvoCount]     = useState("…");
+  const [summaryCount, setSummaryCount] = useState("…");
+  const [recentChats, setRecentChats]   = useState([]);
 
   useEffect(() => {
     getNotesApi()
@@ -76,13 +78,17 @@ export default function Dashboard() {
         setRecentChats(data.conversations.slice(0, 4));
       })
       .catch(() => setConvoCount(0));
+
+    getSummariesApi()
+      .then((data) => setSummaryCount(data.summaries.length))
+      .catch(() => setSummaryCount(0));
   }, []);
 
   const STATS = [
-    { icon: BookOpen,      value: String(noteCount),  label: "Notes uploaded" },
-    { icon: MessageSquare, value: String(convoCount), label: "AI conversations" },
-    { icon: ScrollText,    value: "0",                label: "Summaries made" },
-    { icon: Brain,         value: "0",                label: "Quizzes taken" },
+    { icon: BookOpen,      value: String(noteCount),    label: "Notes uploaded" },
+    { icon: MessageSquare, value: String(convoCount),   label: "AI conversations" },
+    { icon: ScrollText,    value: String(summaryCount), label: "Summaries made" },
+    { icon: Brain,         value: "0",                  label: "Quizzes taken" },
   ];
 
   return (

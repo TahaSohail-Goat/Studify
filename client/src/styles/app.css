@@ -1610,3 +1610,203 @@ body:has(.app-root) {
   .chat-thread__inner { padding: 18px 14px 10px; }
   .chat-composer-wrap { padding: 0 12px 10px; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Summaries (Phase 4)
+   ══════════════════════════════════════════════════════════════════════════ */
+.summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 820px;
+}
+.summary-card {
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-card-border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.summary-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+}
+.summary-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.summary-file__icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-accent);
+  background: var(--app-accent-muted);
+}
+.summary-file__meta { min-width: 0; }
+.summary-file__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.summary-file__sub {
+  font-size: 12.5px;
+  color: var(--app-text-dim);
+  margin-top: 2px;
+}
+.summary-card__action { flex-shrink: 0; }
+
+.summary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: var(--app-accent);
+  color: #150d08;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.18s, background 0.18s, color 0.18s;
+}
+.summary-btn:hover:not(:disabled) { opacity: 0.9; }
+.summary-btn:disabled { opacity: 0.75; cursor: progress; }
+.summary-btn--ghost {
+  background: none;
+  color: var(--app-text-dim);
+  border-color: var(--app-card-border);
+}
+.summary-btn--ghost:hover {
+  color: var(--app-text);
+  border-color: var(--app-accent);
+  background: var(--app-accent-muted);
+}
+
+.summary-loading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 18px 18px;
+  font-size: 13px;
+  color: var(--app-text-dim);
+}
+
+.summary-body {
+  padding: 4px 18px 16px;
+  border-top: 1px solid var(--app-card-border);
+}
+.summary-body .chat-markdown {
+  padding-top: 14px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--app-text);
+}
+.summary-truncated {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--app-text-faint);
+  font-style: italic;
+}
+.summary-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.summary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--app-card-border);
+  background: none;
+  color: var(--app-text-dim);
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.summary-action:hover { color: var(--app-text); background: var(--app-hover); }
+.summary-action--danger:hover {
+  color: var(--app-danger);
+  border-color: var(--app-danger);
+  background: var(--app-danger-muted);
+}
+.summary-action--confirm {
+  color: #fff !important;
+  background: var(--app-danger) !important;
+  border-color: var(--app-danger) !important;
+}
+
+.summary-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 60px 24px;
+}
+.summary-empty__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-accent);
+  background: var(--app-accent-muted);
+  margin-bottom: 4px;
+}
+.summary-empty h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+.summary-empty p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--app-text-dim);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+.summary-skeleton {
+  height: 74px;
+  border-radius: 14px;
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-card-border);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Small inline spinner that adopts its context's text colour */
+.summary-spin {
+  width: 15px;
+  height: 15px;
+  display: inline-block;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0.85;
+  animation: summary-spin 0.7s linear infinite;
+}
+@keyframes summary-spin {
+  to { transform: rotate(360deg); }
+}

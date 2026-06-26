@@ -10,7 +10,8 @@ import "dotenv/config";        // loads secret settings from the .env file into 
 import { connectDB } from "./config/db.js"; // our database connection helper
 import authRoutes from "./routes/auth.js";  // register / login routes
 import notesRoutes from "./routes/notes.js"; // notes upload / list / delete routes
-import chatRoutes from "./routes/chat.js";  // AI chat (Gemini / Grok) routes
+import chatRoutes from "./routes/chat.js";  // AI chat routes
+import summariesRoutes from "./routes/summaries.js"; // AI summaries routes
 
 // Ensure the uploads directory (and the public avatars sub-folder) exist on boot.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -53,6 +54,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/notes", notesRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/summaries", summariesRoutes);
 
 // ── Start listening ──────────────────────────────────────────────────────────
 app.listen(PORT, () => {
