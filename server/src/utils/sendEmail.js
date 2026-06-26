@@ -12,9 +12,9 @@ export async function sendOtpEmail(toEmail, code) {
   });
 
   await transporter.sendMail({
-    from: `"Studyify" <${process.env.EMAIL_USER}>`,
+    from: `"Studify" <${process.env.EMAIL_USER}>`,
     to: toEmail,
-    subject: "Your Studyify verification code",
+    subject: "Your Studify verification code",
     html: `
 <!DOCTYPE html>
 <html>
@@ -38,7 +38,7 @@ export async function sendOtpEmail(toEmail, code) {
               <h1 style="margin:0;font-size:22px;font-weight:800;color:#f3eae0;
                          letter-spacing:-0.5px;">Verify your email</h1>
               <p style="margin:10px 0 0;font-size:14px;color:#b6a392;">
-                Enter this code in Studyify to complete your sign-up.
+                Enter this code in Studify to complete your sign-up.
               </p>
             </td>
           </tr>

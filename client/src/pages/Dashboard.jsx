@@ -1,14 +1,16 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, MessageSquare, ScrollText, Brain, BarChart3, Upload } from "lucide-react";
 import AppLayout from "../components/AppLayout.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { getNotesApi } from "../api/notes.js";
 
 const FEATURES = [
   {
     to: "/notes",
     icon: Upload,
     name: "Upload Notes",
-    desc: "Upload PDFs or paste text and Studyify will index them for AI search.",
+    desc: "Upload PDFs or paste text and Studify will index them for AI search.",
     badge: "Phase 2",
   },
   {
@@ -48,13 +50,6 @@ const FEATURES = [
   },
 ];
 
-const STATS = [
-  { icon: BookOpen,      value: "0", label: "Notes uploaded" },
-  { icon: MessageSquare, value: "0", label: "AI conversations" },
-  { icon: ScrollText,    value: "0", label: "Summaries made" },
-  { icon: Brain,         value: "0", label: "Quizzes taken" },
-];
-
 function greeting(name) {
   const h = new Date().getHours();
   const part = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
@@ -63,12 +58,26 @@ function greeting(name) {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [noteCount, setNoteCount] = useState("…");
+
+  useEffect(() => {
+    getNotesApi()
+      .then((data) => setNoteCount(data.notes.length))
+      .catch(() => setNoteCount(0));
+  }, []);
+
+  const STATS = [
+    { icon: BookOpen,      value: String(noteCount), label: "Notes uploaded" },
+    { icon: MessageSquare, value: "0",               label: "AI conversations" },
+    { icon: ScrollText,    value: "0",               label: "Summaries made" },
+    { icon: Brain,         value: "0",               label: "Quizzes taken" },
+  ];
 
   return (
     <AppLayout title="Dashboard">
       <div className="page-header">
         <h1>{greeting(user?.name)}</h1>
-        <p>Here's an overview of your Studyify workspace.</p>
+        <p>Here's an overview of your Studify workspace.</p>
       </div>
 
       {/* Stats row */}

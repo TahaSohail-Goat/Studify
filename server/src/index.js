@@ -1,11 +1,22 @@
-// ── Studyify backend: the entry point of our server ──────────────────────────
+// ── Studify backend: the entry point of our server ───────────────────────────
 // This file starts a small web server that the React app will talk to.
 
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express"; // Express = a tiny framework that makes building an HTTP API easy
 import cors from "cors";       // CORS = lets our React app (a different port) call this server safely
 import "dotenv/config";        // loads secret settings from the .env file into process.env
 import { connectDB } from "./config/db.js"; // our database connection helper
 import authRoutes from "./routes/auth.js";  // register / login routes
+import notesRoutes from "./routes/notes.js"; // notes upload / list / delete routes
+
+// Ensure the uploads directory (and the public avatars sub-folder) exist on boot.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.join(__dirname, "../uploads");
+const avatarsDir = path.join(uploadsDir, "avatars");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir);
 
 // Connect to MongoDB first. `await` means "wait until this finishes" before continuing.
 await connectDB();
@@ -21,13 +32,17 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());          // allow the browser app to make requests to us
 app.use(express.json());  // automatically turn JSON request bodies into JS objects
 
+// Serve profile photos publicly so <img src="/avatars/..."> works in the browser.
+// (Notes stay private — they're only served through an authenticated route.)
+app.use("/avatars", express.static(avatarsDir));
+
 // ── Routes: "when someone visits this URL, do this" ──────────────────────────
 // A health check is the simplest possible route. We use it to confirm the
 // server is alive. Visit http://localhost:5000/api/health to see it.
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
-    service: "studyify-server",
+    service: "studify-server",
     time: new Date().toISOString(),
   });
 });
@@ -35,6 +50,7 @@ app.get("/api/health", (req, res) => {
 // All routes inside auth.js get the "/api/auth" prefix.
 // So router.post("/register") becomes POST /api/auth/register.
 app.use("/api/auth", authRoutes);
+app.use("/api/notes", notesRoutes);
 
 // ── Start listening ──────────────────────────────────────────────────────────
 app.listen(PORT, () => {

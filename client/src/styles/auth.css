@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   Studyify — Auth & Dashboard UI
+   Studify — Auth & Dashboard UI
    Glassmorphism + animated orbs + 3D tilt  ·  dark-brown / cream theme
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -108,24 +108,19 @@
   gap: 10px;
   margin-bottom: 22px;
 }
-.auth-brand__logo {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  color: var(--espresso);
-  background: linear-gradient(135deg, var(--tan), var(--tan-soft));
-  box-shadow: 0 6px 16px rgba(201, 164, 122, 0.35);
+.auth-brand__img {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(245, 235, 224, 0.18);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 .auth-brand__name {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.4px;
-  background: linear-gradient(90deg, #fff, var(--tan-soft));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 .auth-title {

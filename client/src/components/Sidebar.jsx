@@ -4,6 +4,7 @@ import {
   Brain, BarChart3, Settings, LogOut,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { avatarUrl } from "../api/auth.js";
 
 const NAV_ITEMS = [
   { to: "/dashboard",  icon: LayoutDashboard, label: "Dashboard" },
@@ -26,8 +27,8 @@ export default function Sidebar({ isOpen, onClose }) {
     <aside className={`app-sidebar${isOpen ? " sidebar--open" : ""}`}>
       {/* Brand */}
       <div className="sidebar-brand">
-        <div className="sidebar-brand__logo">S</div>
-        <span className="sidebar-brand__name">Studyify</span>
+        <img src="/studify-logo.png" alt="" className="sidebar-brand__img" />
+        <span className="sidebar-brand__name">Studify</span>
       </div>
 
       {/* Navigation */}
@@ -59,7 +60,11 @@ export default function Sidebar({ isOpen, onClose }) {
       {/* User + logout */}
       <div className="sidebar-bottom">
         <div className="sidebar-user">
-          <div className="sidebar-user__avatar">{getInitials(user?.name)}</div>
+          <div className="sidebar-user__avatar">
+            {user?.avatar
+              ? <img src={avatarUrl(user.avatar)} alt={user?.name || "Avatar"} />
+              : getInitials(user?.name)}
+          </div>
           <div className="sidebar-user__info">
             <div className="sidebar-user__name">{user?.name || "User"}</div>
             <div className="sidebar-user__email">{user?.email || ""}</div>

@@ -6,6 +6,10 @@ node_modules/
 *.env
 !*.env.example
 
+# Credential dumps / DB user notes — never commit
+*db_user*.txt
+*credentials*.txt
+
 # Build output
 dist/
 build/

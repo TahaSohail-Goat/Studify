@@ -6,3 +6,6 @@ node_modules/
 
 # Logs
 *.log
+
+# User-uploaded files — never commit real user data
+uploads/

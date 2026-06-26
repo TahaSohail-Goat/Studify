@@ -3,7 +3,6 @@
 // orbs + a frosted glass card that tilts in 3D toward your mouse.
 
 import { useRef } from "react";
-import { GraduationCap } from "lucide-react";
 
 export default function AuthLayout({ title, subtitle, children, footer }) {
   const cardRef = useRef(null);
@@ -42,10 +41,8 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
         <div className="auth-card" ref={cardRef}>
           {/* translateZ on these lifts them "above" the card for a parallax feel */}
           <div className="auth-brand" style={{ transform: "translateZ(40px)" }}>
-            <span className="auth-brand__logo">
-              <GraduationCap size={20} strokeWidth={2.2} />
-            </span>
-            <span className="auth-brand__name">Studyify</span>
+            <img src="/studify-logo.png" alt="" className="auth-brand__img" />
+            <span className="auth-brand__name">Studify</span>
           </div>
 
           <h1 className="auth-title" style={{ transform: "translateZ(30px)" }}>

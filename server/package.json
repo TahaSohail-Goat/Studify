@@ -1,5 +1,5 @@
 {
-  "name": "studyify-server",
+  "name": "studify-server",
   "version": "1.0.0",
   "description": "Studyify backend API (Node + Express)",
   "type": "module",
@@ -15,6 +15,7 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.1",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.1"
   },
   "devDependencies": {

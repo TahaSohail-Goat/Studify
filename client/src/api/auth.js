@@ -1,4 +1,9 @@
-const API_URL = "http://localhost:5000";
+export const API_URL = "http://localhost:5000";
+
+// Build the public URL for a stored avatar filename (or null if none).
+export function avatarUrl(filename) {
+  return filename ? `${API_URL}/avatars/${filename}` : null;
+}
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_URL}${path}`, {
@@ -63,4 +68,88 @@ export async function getMeApi(token) {
     headers: { Authorization: `Bearer ${token}` },
   });
   return data.user;
+}
+
+function authHeader() {
+  return { Authorization: `Bearer ${localStorage.getItem("token")}` };
+}
+
+export function updateProfileApi(fields) {
+  return request("/api/auth/update-profile", {
+    method: "PUT",
+    headers: authHeader(),
+    body: JSON.stringify(fields),
+  });
+}
+
+export function requestEmailChangeApi(newEmail) {
+  return request("/api/auth/request-email-change", {
+    method: "POST",
+    headers: authHeader(),
+    body: JSON.stringify({ newEmail }),
+  });
+}
+
+export function confirmEmailChangeApi(newEmail, code) {
+  return request("/api/auth/confirm-email-change", {
+    method: "POST",
+    headers: authHeader(),
+    body: JSON.stringify({ newEmail, code }),
+  });
+}
+
+export function deleteAccountApi() {
+  return request("/api/auth/delete-account", {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+}
+
+// Profile photo upload — FormData, so no Content-Type (browser sets the boundary).
+export async function uploadAvatarApi(file) {
+  const formData = new FormData();
+  formData.append("avatar", file);
+
+  const res = await fetch(`${API_URL}/api/auth/avatar`, {
+    method: "POST",
+    headers: authHeader(),
+    body: formData,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Could not upload photo.");
+  return data;
+}
+
+export function removeAvatarApi() {
+  return request("/api/auth/avatar", {
+    method: "DELETE",
+    headers: authHeader(),
+  });
+}
+
+// Invalidate every login token (this device included).
+export function logoutAllApi() {
+  return request("/api/auth/logout-all", {
+    method: "POST",
+    headers: authHeader(),
+  });
+}
+
+// Download a JSON snapshot of the account + notes as a file.
+export async function exportDataApi() {
+  const res = await fetch(`${API_URL}/api/auth/export`, {
+    headers: authHeader(),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Could not export data.");
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "studify-data.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
