@@ -1,9 +1,10 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { MessageSquare, ScrollText, Brain, BarChart3 } from "lucide-react";
+import { ScrollText, Brain, BarChart3 } from "lucide-react";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Notes from "./pages/Notes.jsx";
+import Chat from "./pages/Chat.jsx";
 import Settings from "./pages/Settings.jsx";
 import ComingSoon from "./pages/ComingSoon.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -23,18 +24,9 @@ export default function App() {
       <Route path="/settings"  element={<Protected><Settings /></Protected>} />
 
       <Route path="/notes" element={<Protected><Notes /></Protected>} />
+      <Route path="/chat"  element={<Protected><Chat /></Protected>} />
 
       {/* Placeholder routes for upcoming phases */}
-      <Route path="/chat" element={
-        <Protected>
-          <ComingSoon
-            title="AI Chat"
-            icon={MessageSquare}
-            description="Chat with your notes using Gemini AI — cited, accurate answers in seconds."
-            phase="Phase 3"
-          />
-        </Protected>
-      } />
       <Route path="/summaries" element={
         <Protected>
           <ComingSoon
