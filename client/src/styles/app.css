@@ -477,6 +477,326 @@ body:has(.app-root) {
   width: fit-content;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Dashboard — landing-style hero, about band, and flow timeline
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Scroll-reveal: elements fade + rise the first time they enter the viewport. */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
+
+/* Vertical rhythm for the stacked dashboard sections */
+.dash-section { margin-bottom: 40px; }
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.dash-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--app-card-border);
+  border-radius: 24px;
+  padding: 60px 40px 56px;
+  margin-bottom: 28px;
+  text-align: center;
+  background:
+    radial-gradient(120% 140% at 50% -20%, var(--app-accent-muted) 0%, transparent 55%),
+    var(--app-card-bg);
+  animation: hero-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes hero-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Soft drifting glow behind the wordmark */
+.dash-hero__glow {
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  width: 520px;
+  height: 320px;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, var(--app-accent-muted), transparent 70%);
+  filter: blur(20px);
+  opacity: 0.9;
+  pointer-events: none;
+  animation: hero-float 9s ease-in-out infinite;
+}
+@keyframes hero-float {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%      { transform: translateX(-50%) translateY(16px); }
+}
+
+.dash-hero__inner { position: relative; z-index: 1; }
+
+.dash-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--app-accent);
+  background: var(--app-accent-muted);
+  border: 1px solid var(--app-card-border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  margin-bottom: 22px;
+}
+
+/* The Studify wordmark — Bitcount Single with a metallic shimmer */
+.dash-hero__title {
+  font-family: "Bitcount Single", "Inter", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(64px, 13vw, 132px);
+  line-height: 0.92;
+  letter-spacing: 1px;
+  margin: 0 0 14px;
+  background: linear-gradient(
+    100deg,
+    var(--app-accent) 0%,
+    var(--app-text) 32%,
+    var(--app-accent) 60%,
+    var(--app-text) 100%
+  );
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: hero-shimmer 7s linear infinite;
+}
+@keyframes hero-shimmer {
+  to { background-position: 220% center; }
+}
+
+.dash-hero__tagline {
+  margin: 0 auto 16px;
+  font-size: clamp(18px, 2.6vw, 24px);
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--app-text);
+}
+.dash-hero__desc {
+  margin: 0 auto;
+  max-width: 600px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--app-text-dim);
+}
+
+.dash-hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+.dash-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.16s, opacity 0.16s, background 0.16s, border-color 0.16s, color 0.16s;
+}
+.dash-btn:hover { text-decoration: none; transform: translateY(-2px); }
+.dash-btn--primary {
+  background: var(--app-accent);
+  color: #150d08;
+  border: 1px solid transparent;
+  box-shadow: 0 8px 22px -10px var(--app-accent);
+}
+.dash-btn--primary:hover { opacity: 0.92; }
+.dash-btn--ghost {
+  background: var(--app-card-bg);
+  color: var(--app-text);
+  border: 1px solid var(--app-card-border);
+}
+.dash-btn--ghost:hover { border-color: var(--app-accent); color: var(--app-accent); }
+
+.dash-hero__hello {
+  margin: 26px 0 0;
+  font-size: 13px;
+  color: var(--app-text-faint);
+}
+
+/* ── Section heads (About + Flow) ────────────────────────────────────────── */
+.dash-kicker {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--app-accent);
+}
+.dash-h2 {
+  font-family: "Bitcount Single", "Inter", system-ui, sans-serif;
+  font-weight: 500;
+  font-size: clamp(24px, 4vw, 34px);
+  line-height: 1.15;
+  letter-spacing: 0.4px;
+  color: var(--app-text);
+  margin: 0 0 14px;
+  max-width: 720px;
+}
+.dash-h2__accent { color: var(--app-accent); }
+.dash-lead {
+  margin: 0 0 26px;
+  max-width: 680px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--app-text-dim);
+}
+.dash-lead em { color: var(--app-text); font-style: italic; }
+
+/* ── About: three pillars ────────────────────────────────────────────────── */
+.pillar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 860px) {
+  .pillar-grid { grid-template-columns: 1fr; }
+}
+.pillar-card {
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-card-border);
+  border-radius: 16px;
+  padding: 24px 22px;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.pillar-card:hover {
+  border-color: var(--app-accent);
+  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.5);
+}
+.pillar-card__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: var(--app-accent-muted);
+  color: var(--app-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.pillar-card__title {
+  margin: 0 0 6px;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+.pillar-card__desc {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--app-text-dim);
+}
+
+/* ── Flow timeline ───────────────────────────────────────────────────────── */
+.flow-timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.flow-step {
+  display: flex;
+  gap: 18px;
+}
+/* Rail = the node + the connector line beneath it */
+.flow-step__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+.flow-step__node {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #150d08;
+  background: linear-gradient(135deg, var(--app-accent), #ddbf9b);
+  box-shadow: 0 0 0 5px var(--app-accent-muted);
+  z-index: 1;
+}
+.flow-step__node--soon {
+  color: var(--app-accent);
+  background: var(--app-card-bg);
+  border: 1px dashed var(--app-accent);
+  box-shadow: 0 0 0 5px var(--app-accent-muted);
+}
+.flow-step__line {
+  flex: 1;
+  width: 2px;
+  min-height: 26px;
+  margin: 4px 0;
+  background: linear-gradient(var(--app-accent), var(--app-card-border));
+  opacity: 0.5;
+}
+.flow-step__body {
+  flex: 1;
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-card-border);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 14px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.flow-step__body:hover {
+  border-color: var(--app-accent);
+  transform: translateX(3px);
+}
+.flow-step__tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--app-accent);
+  margin-bottom: 5px;
+}
+.flow-step__tag--soon { color: var(--app-text-faint); }
+.flow-step__title {
+  margin: 0 0 4px;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+.flow-step__desc {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--app-text-dim);
+}
+@media (max-width: 640px) {
+  .dash-hero { padding: 44px 22px 40px; border-radius: 20px; }
+  .flow-step__node { width: 40px; height: 40px; }
+  .flow-step__body { padding: 14px 16px; }
+}
+
 /* ── Settings page ───────────────────────────────────────────────────────── */
 .settings-layout {
   display: flex;
@@ -1754,6 +2074,54 @@ body:has(.app-root) {
   background: var(--app-danger) !important;
   border-color: var(--app-danger) !important;
 }
+
+/* Download dropdown (PDF / CSV) */
+.summary-dl {
+  position: relative;
+}
+.summary-dl-menu {
+  position: absolute;
+  /* Opens upward so it isn't clipped by the card's overflow:hidden */
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 188px;
+  padding: 6px;
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-card-border);
+  border-radius: 11px;
+  box-shadow: 0 -10px 30px -10px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: summary-dl-in 0.14s ease;
+}
+@keyframes summary-dl-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.summary-dl-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 11px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--app-text-dim);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.14s, color 0.14s;
+}
+.summary-dl-item:hover {
+  background: var(--app-hover);
+  color: var(--app-text);
+}
+.summary-dl-item svg { color: var(--app-accent); flex-shrink: 0; }
 
 .summary-empty {
   display: flex;
