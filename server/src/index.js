@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express"; // Express = a tiny framework that makes building an HTTP API easy
 import cors from "cors";       // CORS = lets our React app (a different port) call this server safely
+import rateLimit from "express-rate-limit"; // throttles abusive clients
 import "dotenv/config";        // loads secret settings from the .env file into process.env
 import { connectDB } from "./config/db.js"; // our database connection helper
 import authRoutes from "./routes/auth.js";  // register / login routes
@@ -30,6 +31,10 @@ await connectDB();
 // `app` is our server. We attach routes and settings to it.
 const app = express();
 
+// Trust the first proxy (needed so rate-limiting sees the real client IP when
+// deployed behind a host like Render/Railway).
+app.set("trust proxy", 1);
+
 // The "port" is the door number the server listens on. We read it from .env,
 // and fall back to 5000 if it isn't set.
 const PORT = process.env.PORT || 5000;
@@ -37,6 +42,18 @@ const PORT = process.env.PORT || 5000;
 // ── Middleware: code that runs on every incoming request ─────────────────────
 app.use(cors());          // allow the browser app to make requests to us
 app.use(express.json());  // automatically turn JSON request bodies into JS objects
+
+// ── Rate limiters: protect against brute-force / abuse and the shared AI key ──
+const rateLimitMsg = (message) => ({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message },
+});
+// Auth: guards login/OTP against brute-force and spam.
+const authLimiter = rateLimit({ ...rateLimitMsg("Too many attempts. Please wait a few minutes and try again."), max: 40 });
+// AI: caps how often one client can hit the (cost-bearing) AI endpoints.
+const aiLimiter = rateLimit({ ...rateLimitMsg("You're sending requests too quickly. Please slow down and try again shortly."), max: 120 });
 
 // Serve profile photos publicly so <img src="/avatars/..."> works in the browser.
 // (Notes stay private — they're only served through an authenticated route.)
@@ -55,11 +72,11 @@ app.get("/api/health", (req, res) => {
 
 // All routes inside auth.js get the "/api/auth" prefix.
 // So router.post("/register") becomes POST /api/auth/register.
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/notes", notesRoutes);
-app.use("/api/chat", chatRoutes);
-app.use("/api/summaries", summariesRoutes);
-app.use("/api/quizzes", quizzesRoutes);
+app.use("/api/chat", aiLimiter, chatRoutes);
+app.use("/api/summaries", aiLimiter, summariesRoutes);
+app.use("/api/quizzes", aiLimiter, quizzesRoutes);
 app.use("/api/rag", ragRoutes);
 app.use("/api/analytics", analyticsRoutes);
 

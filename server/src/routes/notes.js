@@ -11,6 +11,8 @@ import { indexNote } from "../utils/rag.js";
 
 const router = express.Router();
 
+const STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB per user
+
 // ── POST /api/notes/upload ─────────────────────────────────────────────────────
 router.post("/upload", requireAuth, (req, res, next) => {
   upload.single("file")(req, res, (err) => {
@@ -20,6 +22,16 @@ router.post("/upload", requireAuth, (req, res, next) => {
 }, async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file provided." });
+
+    // Enforce the per-user storage cap (the file is already on disk via multer).
+    const existing = await Note.find({ userId: req.userId }, "size");
+    const used = existing.reduce((sum, n) => sum + n.size, 0);
+    if (used + req.file.size > STORAGE_LIMIT) {
+      fs.unlink(path.join(UPLOADS_DIR, req.file.filename), () => {});
+      return res.status(413).json({
+        message: "You've reached your 100 MB storage limit. Delete some files and try again.",
+      });
+    }
 
     const note = await Note.create({
       userId:       req.userId,
