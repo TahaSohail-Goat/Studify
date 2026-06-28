@@ -4,7 +4,10 @@ import nodemailer from "nodemailer";
 // process.env vars are guaranteed to be loaded by dotenv before we read them.
 export async function sendOtpEmail(toEmail, code) {
   const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    family: 4, // force IPv4 — Railway free tier blocks IPv6 outbound
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
