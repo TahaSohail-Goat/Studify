@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   Plus, ArrowUp, Square, Copy, Check, Trash2,
-  MessageSquare, Sparkles, AlertCircle, ChevronDown,
+  MessageSquare, Sparkles, AlertCircle, ChevronDown, Database,
 } from "lucide-react";
 import AppLayout from "../components/AppLayout.jsx";
 import {
@@ -17,6 +17,19 @@ function MessageBody({ content }) {
   return (
     <div className="chat-markdown">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
+  );
+}
+
+// RAG: the notes that grounded this reply (shown under the assistant message).
+function ChatSources({ sources }) {
+  return (
+    <div className="chat-sources">
+      <Database size={12} />
+      <span className="chat-sources__label">From your notes:</span>
+      {sources.map((s) => (
+        <span key={s.noteId} className="chat-source-chip">{s.noteName}</span>
+      ))}
     </div>
   );
 }
@@ -38,8 +51,9 @@ export default function Chat() {
   const [input, setInput]                 = useState("");
   const [sending, setSending]             = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [streamingSources, setStreamingSources] = useState([]);
   const [error, setError]                 = useState("");
-  const [confirmDelId, setConfirmDelId]   = useState(null);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [copiedIdx, setCopiedIdx]         = useState(null);
   const [atBottom, setAtBottom]           = useState(true);
 
@@ -50,6 +64,24 @@ export default function Chat() {
   const inputRef     = useRef(null);
   const abortRef     = useRef(null);
   const atBottomRef  = useRef(true);
+  const modelMenuRef = useRef(null);
+
+  // Close the model dropdown on outside click or Escape.
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+    function onClick(e) {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(e.target)) setModelMenuOpen(false);
+    }
+    function onKey(e) {
+      if (e.key === "Escape") setModelMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [modelMenuOpen]);
 
   // ── Load models + conversation list on mount ────────────────────────────────
   useEffect(() => {
@@ -152,6 +184,7 @@ export default function Chat() {
     setInput("");
     setSending(true);
     setStreamingContent("");
+    setStreamingSources([]);
     atBottomRef.current = true;
     setAtBottom(true);
 
@@ -159,12 +192,14 @@ export default function Chat() {
     abortRef.current = ac;
 
     let acc = "";
+    let srcs = [];
     let committed = false;
     const commit = () => {
       if (committed) return;
       committed = true;
-      if (acc) setMessages((prev) => [...prev, { role: "assistant", content: acc }]);
+      if (acc) setMessages((prev) => [...prev, { role: "assistant", content: acc, sources: srcs }]);
       setStreamingContent("");
+      setStreamingSources([]);
       refreshConversations();
     };
 
@@ -172,10 +207,14 @@ export default function Chat() {
       await sendMessageStreamApi(
         { conversationId: activeId, model: selectedModel, content, signal: ac.signal },
         {
-          onStart: (evt) => { if (!activeId) setActiveId(evt.conversationId); },
+          onStart: (evt) => {
+            if (!activeId) setActiveId(evt.conversationId);
+            srcs = evt.sources || [];
+            setStreamingSources(srcs);
+          },
           onDelta: (text) => { acc += text; setStreamingContent(acc); },
           onDone: commit,
-          onError: (msg) => { committed = true; setError(msg); setStreamingContent(""); },
+          onError: (msg) => { committed = true; setError(msg); setStreamingContent(""); setStreamingSources([]); },
         }
       );
     } catch (err) {
@@ -212,21 +251,15 @@ export default function Chat() {
     }
   }
 
-  // ── Delete a conversation (two-click confirm) ───────────────────────────────
+  // ── Delete a conversation (single tap) ──────────────────────────────────────
   async function handleDelete(e, id) {
     e.stopPropagation();
-    if (confirmDelId !== id) {
-      setConfirmDelId(id);
-      return;
-    }
     try {
       await deleteConversationApi(id);
       setConversations((prev) => prev.filter((c) => c._id !== id));
       if (id === activeId) newChat();
     } catch (err) {
       setError(err.message);
-    } finally {
-      setConfirmDelId(null);
     }
   }
 
@@ -256,9 +289,9 @@ export default function Chat() {
                   <MessageSquare size={14} className="chat-convo-icon" />
                   <span className="chat-convo-title">{c.title}</span>
                   <span
-                    className={`chat-convo-del${confirmDelId === c._id ? " chat-convo-del--confirm" : ""}`}
+                    className="chat-convo-del"
                     onClick={(e) => handleDelete(e, c._id)}
-                    title={confirmDelId === c._id ? "Click again to confirm" : "Delete"}
+                    title="Delete"
                     role="button"
                   >
                     <Trash2 size={13} />
@@ -300,6 +333,7 @@ export default function Chat() {
                           <div className="chat-msg__bubble">
                             <MessageBody content={m.content} />
                           </div>
+                          {m.sources?.length > 0 && <ChatSources sources={m.sources} />}
                           <div className="chat-actions">
                             <button
                               className="chat-action-btn"
@@ -326,6 +360,7 @@ export default function Chat() {
                             <span className="chat-typing"><span></span><span></span><span></span></span>
                           )}
                         </div>
+                        {streamingSources.length > 0 && <ChatSources sources={streamingSources} />}
                       </div>
                     </div>
                   )}
@@ -365,18 +400,36 @@ export default function Chat() {
                 rows={1}
               />
               <div className="chat-composer-row">
-                <select
-                  className="chat-model-select"
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  title="Choose a model"
-                >
-                  {models.map((m) => (
-                    <option key={m.id} value={m.id} disabled={!m.available}>
-                      {m.label}{m.available ? "" : " — not configured"}
-                    </option>
-                  ))}
-                </select>
+                <div className="chat-model" ref={modelMenuRef}>
+                  <button
+                    type="button"
+                    className="chat-model-btn"
+                    onClick={() => setModelMenuOpen((o) => !o)}
+                    aria-haspopup="listbox"
+                    aria-expanded={modelMenuOpen}
+                    title="Choose a model"
+                  >
+                    {models.find((m) => m.id === selectedModel)?.label || "Model"}
+                    <ChevronDown size={14} className="chat-model-btn__chev" />
+                  </button>
+                  {modelMenuOpen && (
+                    <div className="chat-model-menu" role="listbox">
+                      {models.map((m) => (
+                        <button
+                          type="button"
+                          key={m.id}
+                          role="option"
+                          aria-selected={m.id === selectedModel}
+                          className={`chat-model-opt${m.id === selectedModel ? " chat-model-opt--active" : ""}`}
+                          disabled={!m.available}
+                          onClick={() => { setSelectedModel(m.id); setModelMenuOpen(false); }}
+                        >
+                          {m.label}{m.available ? "" : " — not configured"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {sending ? (
                   <button

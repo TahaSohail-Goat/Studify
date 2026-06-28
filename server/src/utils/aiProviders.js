@@ -64,22 +64,32 @@ function groqKey() {
 }
 
 // Groq is OpenAI-compatible: a flat messages array with roles system/user/assistant.
-function toGroqMessages(messages) {
+// Pass `system` to override the default Studify persona (e.g. JSON-only tasks).
+function toGroqMessages(messages, system) {
   return [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: system || SYSTEM_PROMPT },
     ...messages.map((m) => ({ role: m.role, content: m.content })),
   ];
 }
 
 // ── Non-streaming: get the whole reply at once ────────────────────────────────
-export async function chatComplete(modelId, messages) {
+// options: { system, temperature, maxTokens, responseFormat } — all optional.
+export async function chatComplete(modelId, messages, options = {}) {
   resolveModel(modelId); // validate the id
   const key = groqKey();
+
+  const body = {
+    model: modelId,
+    messages: toGroqMessages(messages, options.system),
+  };
+  if (options.temperature != null) body.temperature = options.temperature;
+  if (options.maxTokens != null) body.max_tokens = options.maxTokens;
+  if (options.responseFormat) body.response_format = options.responseFormat;
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: modelId, messages: toGroqMessages(messages) }),
+    body: JSON.stringify(body),
   });
 
   const data = await res.json().catch(() => ({}));
@@ -92,7 +102,8 @@ export async function chatComplete(modelId, messages) {
 
 // ── Streaming: invoke onChunk(textDelta) as tokens arrive; resolves to full text ─
 // Pass an AbortSignal to support "stop generating" — on abort we keep the partial.
-export async function chatStream(modelId, messages, onChunk, signal) {
+// options: { system } — optional system-prompt override (used for RAG grounding).
+export async function chatStream(modelId, messages, onChunk, signal, options = {}) {
   resolveModel(modelId);
   const key = groqKey();
 
@@ -101,7 +112,7 @@ export async function chatStream(modelId, messages, onChunk, signal) {
     res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: modelId, stream: true, messages: toGroqMessages(messages) }),
+      body: JSON.stringify({ model: modelId, stream: true, messages: toGroqMessages(messages, options.system) }),
       signal,
     });
   } catch (err) {

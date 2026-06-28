@@ -3,8 +3,11 @@ import path from "node:path";
 import fs from "node:fs";
 import { Note } from "../models/Note.js";
 import { Summary } from "../models/Summary.js";
+import { Quiz } from "../models/Quiz.js";
+import { Chunk } from "../models/Chunk.js";
 import { upload, UPLOADS_DIR } from "../middleware/upload.js";
 import { requireAuth } from "../middleware/auth.js";
+import { indexNote } from "../utils/rag.js";
 
 const router = express.Router();
 
@@ -26,7 +29,10 @@ router.post("/upload", requireAuth, (req, res, next) => {
       size:         req.file.size,
     });
 
+    // Respond right away, then build the RAG search index in the background so
+    // the upload feels instant. Failures here never break the upload.
     res.status(201).json({ note });
+    indexNote(note).catch((e) => console.error("auto-index error:", e.message));
   } catch (err) {
     console.error("upload error:", err.message);
     res.status(500).json({ message: "Upload failed. Please try again." });
@@ -67,6 +73,8 @@ router.delete("/:id", requireAuth, async (req, res) => {
     fs.unlink(path.join(UPLOADS_DIR, note.storedName), () => {});
     await Note.deleteOne({ _id: note._id });
     await Summary.deleteOne({ noteId: note._id }); // drop its summary too
+    await Quiz.deleteOne({ noteId: note._id });    // ...and its quiz
+    await Chunk.deleteMany({ noteId: note._id });  // ...and its search chunks
     res.json({ message: "Note deleted." });
   } catch (err) {
     console.error("delete note error:", err.message);

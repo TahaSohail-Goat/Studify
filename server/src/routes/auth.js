@@ -8,6 +8,8 @@ import { User } from "../models/User.js";
 import { OtpCode } from "../models/OtpCode.js";
 import { Note } from "../models/Note.js";
 import { Summary } from "../models/Summary.js";
+import { Quiz } from "../models/Quiz.js";
+import { Chunk } from "../models/Chunk.js";
 import { UPLOADS_DIR, AVATARS_DIR, avatarUpload } from "../middleware/upload.js";
 import { sendOtpEmail } from "../utils/sendEmail.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -65,7 +67,7 @@ router.post("/send-otp", async (req, res) => {
     await OtpCode.findOneAndUpdate(
       { email: email.toLowerCase() },
       { code, createdAt: new Date() },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     await sendOtpEmail(email, code);
@@ -159,7 +161,7 @@ router.post("/resend-otp", async (req, res) => {
     await OtpCode.findOneAndUpdate(
       { email: email.toLowerCase() },
       { code, createdAt: new Date() },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     await sendOtpEmail(email, code);
@@ -245,7 +247,7 @@ router.put("/update-profile", requireAuth, async (req, res) => {
     if (!Object.keys(update).length)
       return res.status(400).json({ message: "Nothing to update." });
 
-    const user = await User.findByIdAndUpdate(req.userId, update, { new: true }).select("-password");
+    const user = await User.findByIdAndUpdate(req.userId, update, { returnDocument: "after" }).select("-password");
     res.json({ user: publicUser(user) });
   } catch (err) {
     console.error("update-profile error:", err.message);
@@ -267,7 +269,7 @@ router.post("/request-email-change", requireAuth, async (req, res) => {
     await OtpCode.findOneAndUpdate(
       { email: newEmail.toLowerCase() },
       { code, createdAt: new Date() },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
     await sendOtpEmail(newEmail, code);
     res.json({ message: "Verification code sent to new email." });
@@ -292,7 +294,7 @@ router.post("/confirm-email-change", requireAuth, async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.userId,
       { email: newEmail.toLowerCase() },
-      { new: true }
+      { returnDocument: "after" }
     ).select("-password");
 
     res.json({ user: publicUser(user) });
@@ -320,6 +322,8 @@ router.delete("/delete-account", requireAuth, async (req, res) => {
     // ...then the database records.
     await Note.deleteMany({ userId: req.userId });
     await Summary.deleteMany({ userId: req.userId });
+    await Quiz.deleteMany({ userId: req.userId });
+    await Chunk.deleteMany({ userId: req.userId });
     await User.findByIdAndDelete(req.userId);
     res.json({ message: "Account deleted." });
   } catch (err) {

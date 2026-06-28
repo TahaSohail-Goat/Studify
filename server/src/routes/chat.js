@@ -2,8 +2,32 @@ import express from "express";
 import { Conversation } from "../models/Conversation.js";
 import { requireAuth } from "../middleware/auth.js";
 import { listModels, chatStream } from "../utils/aiProviders.js";
+import { retrieve, sourcesFromHits } from "../utils/rag.js";
 
 const router = express.Router();
+
+// Base persona shared by plain and RAG-grounded replies.
+const PERSONA =
+  "You are Studify's AI study assistant. You help students understand concepts and " +
+  "study more effectively. Be clear, accurate, and encouraging. Use simple language " +
+  "and concrete examples. Format answers with Markdown — short paragraphs, **bold** for " +
+  "key terms, bullet or numbered lists, and fenced code blocks for code.";
+
+// Build a system prompt that grounds the answer in retrieved note passages (RAG).
+function buildRagSystem(hits) {
+  const context = hits
+    .map((h, i) => `[${i + 1}] (from "${h.noteName}")\n${h.text}`)
+    .join("\n\n");
+  return (
+    `${PERSONA}\n\n` +
+    "The student has uploaded study notes. Relevant excerpts are below. " +
+    "Answer using this context first and cite the sources inline like [1], [2] where you use them. " +
+    "If the excerpts don't fully cover the question, say so briefly and then answer from general knowledge.\n\n" +
+    "=== NOTE EXCERPTS ===\n" +
+    context +
+    "\n=== END EXCERPTS ==="
+  );
+}
 
 // Every route here requires a logged-in user.
 router.use(requireAuth);
@@ -107,6 +131,21 @@ router.post("/send", async (req, res) => {
   conversation.model = model;
   const history = conversation.messages.map((m) => ({ role: m.role, content: m.content }));
 
+  // ── RAG: find the most relevant passages from the user's notes ──────────────
+  // If we find any, we ground the reply in them and tell the client which notes
+  // were used. Retrieval failures (e.g. embeddings warming up) never break chat.
+  let systemPrompt;
+  let sources = [];
+  try {
+    const hits = await retrieve(req.userId, content.trim(), 5);
+    if (hits.length) {
+      systemPrompt = buildRagSystem(hits);
+      sources = sourcesFromHits(hits);
+    }
+  } catch (err) {
+    console.error("rag retrieve error:", err.message);
+  }
+
   // From here on we stream — headers are committed, so errors go through events.
   res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
@@ -122,15 +161,21 @@ router.post("/send", async (req, res) => {
 
   // Hand the client its conversation id up-front, so "Stop" still tracks the chat
   // even if the reply is interrupted before the final "done" event.
-  send({ type: "start", conversationId: conversation._id, title: conversation.title });
+  send({ type: "start", conversationId: conversation._id, title: conversation.title, sources });
 
-  // If the client disconnects (e.g. presses Stop), abort the upstream Gemini call.
+  // If the client disconnects (e.g. presses Stop), abort the upstream call.
   const ac = new AbortController();
   req.on("close", () => ac.abort());
 
   let full = "";
   try {
-    full = await chatStream(model, history, (delta) => send({ type: "delta", text: delta }), ac.signal);
+    full = await chatStream(
+      model,
+      history,
+      (delta) => send({ type: "delta", text: delta }),
+      ac.signal,
+      { system: systemPrompt }
+    );
   } catch (err) {
     console.error("chat stream error:", err.message);
     send({ type: "error", message: err.message || "The AI request failed." });
