@@ -47,6 +47,22 @@ export function resendOtpApi(email) {
   });
 }
 
+// Password reset — step 1: email a reset code.
+export function forgotPasswordApi(email) {
+  return request("/api/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+// Password reset — step 2: verify the code + set a new password. Returns { token, user }.
+export function resetPasswordApi(email, code, newPassword) {
+  return request("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ email, code, newPassword }),
+  });
+}
+
 export function changePasswordApi(currentPassword, newPassword) {
   const token = localStorage.getItem("token");
   return request("/api/auth/change-password", {

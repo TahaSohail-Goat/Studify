@@ -221,6 +221,66 @@ router.put("/change-password", requireAuth, async (req, res) => {
   }
 });
 
+// ── POST /api/auth/forgot-password ───────────────────────────────────────────
+// Step 1 of a reset: email a 6-digit code — but only if the account exists.
+// We always respond the same way so we never reveal which emails are registered.
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required." });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (user) {
+      const code = generateOtp();
+      await OtpCode.findOneAndUpdate(
+        { email: email.toLowerCase() },
+        { code, createdAt: new Date() },
+        { upsert: true, returnDocument: "after" }
+      );
+      try {
+        await sendOtpEmail(email, code);
+      } catch (err) {
+        console.error("forgot-password email error:", err.message);
+        return res.status(500).json({ message: "Could not send the reset email. Please try again." });
+      }
+    }
+    res.json({ message: "If an account exists for that email, a reset code is on its way." });
+  } catch (err) {
+    console.error("forgot-password error:", err.message);
+    res.status(500).json({ message: "Something went wrong. Please try again." });
+  }
+});
+
+// ── POST /api/auth/reset-password ────────────────────────────────────────────
+// Step 2: verify the code + set a new password. Logs the user in on success and
+// invalidates any existing sessions (tokenVersion bump).
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword)
+      return res.status(400).json({ message: "Email, code, and a new password are required." });
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: "New password must be at least 6 characters." });
+
+    const record = await OtpCode.findOne({ email: email.toLowerCase() });
+    if (!record || record.code !== code)
+      return res.status(400).json({ message: "Invalid or expired code. Request a new one." });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ message: "Account not found." });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1; // sign out any old sessions
+    await user.save();
+    await OtpCode.deleteOne({ _id: record._id });
+
+    res.json({ token: signAuthToken(user), user: publicUser(user) });
+  } catch (err) {
+    console.error("reset-password error:", err.message);
+    res.status(500).json({ message: "Something went wrong. Please try again." });
+  }
+});
+
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
 router.get("/me", requireAuth, async (req, res) => {
   const user = await User.findById(req.userId).select("-password");
