@@ -1,151 +1,122 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   Studify — Auth & Dashboard UI
-   Glassmorphism + animated orbs + 3D tilt  ·  Midnight Indigo theme
+   Studify — Auth UI
+   Split screen: brand image (left) + form (right)  ·  Espresso/Tan theme
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* Auth/landing palette — independent of the in-app light/dark theme. */
+/* Auth palette — independent of the in-app light/dark theme. */
+.auth-split,
 .auth-page,
 .dash {
-  --a-bg-1: #0b0e22;
-  --a-bg-2: #11163a;
-  --a-text: #eef0ff;
-  --a-text-dim: #a6abd6;
-  --a-text-faint: #6f74a3;
-  --a-accent: #7c83ff;       /* indigo-violet */
-  --a-accent-soft: #aab0ff;
-  --a-accent-2: #5b8cff;     /* blue */
+  --a-bg-1: #160d07;
+  --a-bg-2: #20140d;
+  --a-text: #f4ece2;
+  --a-text-dim: #c9b29a;
+  --a-text-faint: #9a8064;
+  --a-accent: #c9a47a;       /* tan */
+  --a-accent-soft: #e0c39e;  /* light tan */
+  --a-accent-2: #d99a5b;     /* amber */
   --a-glass: rgba(255, 255, 255, 0.05);
   --a-glass-2: rgba(255, 255, 255, 0.09);
-  --a-border: rgba(255, 255, 255, 0.12);
+  --a-border: rgba(224, 195, 158, 0.18);
   --a-field-bg: rgba(255, 255, 255, 0.045);
-  --a-chip-bg: #161c40;      /* solid bg behind floating labels */
+  --a-chip-bg: #19100a;      /* matches the panel, so the floated label notch blends */
 }
 
-/* ── Page shell ──────────────────────────────────────────────────────────── */
-.auth-page,
-.dash {
-  position: relative;
+/* ── Split shell ─────────────────────────────────────────────────────────── */
+.auth-split {
+  display: flex;
   min-height: 100vh;
   width: 100%;
-  overflow: hidden;
+  color: var(--a-text);
+  background: linear-gradient(160deg, var(--a-bg-1) 0%, var(--a-bg-2) 55%, #100a06 100%);
+}
+
+/* Full-screen loader background (ProtectedRoute auth check) */
+.auth-page {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  min-height: 100vh;
   color: var(--a-text);
-  background:
-    radial-gradient(1200px 620px at 12% -12%, rgba(91, 140, 255, 0.20), transparent 60%),
-    radial-gradient(1000px 720px at 112% 114%, rgba(139, 92, 246, 0.20), transparent 55%),
-    linear-gradient(160deg, var(--a-bg-1) 0%, var(--a-bg-2) 55%, #0c1030 100%);
+  background: linear-gradient(160deg, var(--a-bg-1) 0%, var(--a-bg-2) 55%, #100a06 100%);
 }
 
-/* ── Floating gradient orbs (cool blur behind the glass) ─────────────────── */
-.orb {
+/* ── Left: full-bleed image ──────────────────────────────────────────────── */
+.auth-visual {
+  position: relative;
+  flex: 1 1 50%;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #100a06;
+}
+.auth-visual__img {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(72px);
-  opacity: 0.55;
-  pointer-events: none;
-  z-index: 0;
-  animation: float 16s ease-in-out infinite;
-}
-.orb--1 {
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle at 30% 30%, #6d5cff, transparent 70%);
-  top: -80px;
-  left: -60px;
-}
-.orb--2 {
-  width: 480px;
-  height: 480px;
-  background: radial-gradient(circle at 30% 30%, #3b6dff, transparent 70%);
-  bottom: -120px;
-  right: -80px;
-  animation-delay: -4s;
-}
-.orb--3 {
-  width: 360px;
-  height: 360px;
-  background: radial-gradient(circle at 30% 30%, #9b6cff, transparent 70%);
-  top: 40%;
-  left: 55%;
-  animation-delay: -8s;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(40px, -30px) scale(1.08);
-  }
-  66% {
-    transform: translate(-30px, 25px) scale(0.95);
-  }
-}
-
-/* ── 3D stage + glass card ───────────────────────────────────────────────── */
-.auth-stage {
-  position: relative;
-  z-index: 1;
-  perspective: 1200px; /* this is what makes the tilt look 3D */
+  inset: 0;
   width: 100%;
-  max-width: 430px;
+  height: 100%;
+  object-fit: cover;          /* fill the panel cleanly */
+  object-position: center;
+}
+/* Gentle scrim that blends the photo toward the form side */
+.auth-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 55%, rgba(16, 10, 6, 0.55) 100%);
+  pointer-events: none;
 }
 
-.auth-card {
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.25s ease-out;
-  padding: 40px 34px;
-  border-radius: 28px;
-
-  /* The glass: translucent cool fill + blur of whatever is behind it */
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  backdrop-filter: blur(22px) saturate(140%);
-  border: 1px solid var(--a-border);
-  box-shadow: 0 30px 80px rgba(5, 7, 26, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
-
-  animation: card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+/* ── Right: form panel ───────────────────────────────────────────────────── */
+.auth-panel {
+  flex: 1 1 48%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background:
+    radial-gradient(720px 520px at 82% 4%, rgba(201, 164, 122, 0.10), transparent 60%),
+    linear-gradient(160deg, #160d07 0%, #1c130b 60%, #100a06 100%);
 }
-
+.auth-formwrap {
+  width: 100%;
+  max-width: 400px;
+  animation: card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 @keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Brand / titles ──────────────────────────────────────────────────────── */
+/* Brand lockup — logo + Studify wordmark, sits above the page title */
 .auth-brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 24px;
 }
 .auth-brand__img {
-  width: 52px;
-  height: 52px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 1px solid rgba(124, 131, 255, 0.35);
-  box-shadow: 0 6px 22px rgba(91, 140, 255, 0.4);
+  display: block;
+  border: 1px solid rgba(201, 164, 122, 0.45);
+  box-shadow: 0 6px 22px rgba(201, 164, 122, 0.4);
+  animation: logo-glow 3.6s ease-in-out infinite;
+}
+@keyframes logo-glow {
+  0%, 100% { box-shadow: 0 6px 22px rgba(201, 164, 122, 0.35); }
+  50%      { box-shadow: 0 6px 30px rgba(224, 195, 158, 0.6); }
 }
 .auth-brand__name {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.4px;
-  color: var(--a-text);
-  background: linear-gradient(120deg, #ffffff, #aab0ff);
+  font-family: "Rye", "Inter", serif;
+  font-weight: 400;
+  font-size: clamp(34px, 4vw, 42px);
+  line-height: 1;            /* centers the wordmark against the logo */
+  letter-spacing: 0.5px;
+  background: linear-gradient(120deg, #f4ece2 0%, #e0c39e 45%, #c9a47a 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -198,7 +169,7 @@
 .field__input:focus {
   border-color: var(--a-accent);
   background: var(--a-glass-2);
-  box-shadow: 0 0 0 4px rgba(124, 131, 255, 0.18);
+  box-shadow: 0 0 0 4px rgba(201, 164, 122, 0.2);
 }
 .field__input:focus ~ .field__icon {
   color: var(--a-accent-soft);
@@ -213,7 +184,7 @@
 .field__input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--a-text);
   caret-color: var(--a-text);
-  -webkit-box-shadow: 0 0 0 1000px #151a3b inset;
+  -webkit-box-shadow: 0 0 0 1000px #20140d inset;
   transition: background-color 9999s ease-in-out 0s;
 }
 
@@ -223,13 +194,27 @@
   left: 42px;
   top: 50%;
   transform: translateY(-50%);
+  z-index: 2;                /* sit above the input value */
   color: var(--a-text-faint);
   font-size: 15px;
   pointer-events: none;
   transition: all 0.18s ease;
 }
+/* Raise the label on focus or when the field has a value (typed). */
 .field__input:focus + .field__label,
 .field__input:not(:placeholder-shown) + .field__label {
+  top: 0;
+  left: 14px;
+  transform: translateY(-50%) scale(0.82);
+  padding: 0 6px;
+  color: var(--a-accent-soft);
+  background: var(--a-chip-bg);
+  border-radius: 6px;
+}
+/* Chrome autofill doesn't reliably trigger :not(:placeholder-shown), so raise
+   the label here too. Kept in its own rule so non-WebKit browsers don't drop
+   the rule above. */
+.field__input:-webkit-autofill + .field__label {
   top: 0;
   left: 14px;
   transform: translateY(-50%) scale(0.82);
@@ -267,10 +252,10 @@
   border-radius: 14px;
   font-size: 15px;
   font-weight: 700;
-  color: #fff;
+  color: #20140d;
   cursor: pointer;
-  background: linear-gradient(120deg, #5b6bff, #8b5cf6);
-  box-shadow: 0 10px 30px rgba(91, 107, 255, 0.45);
+  background: linear-gradient(120deg, #b9743a, #c9a47a 55%, #e0c39e);
+  box-shadow: 0 10px 30px rgba(201, 164, 122, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
   display: flex;
   align-items: center;
@@ -278,8 +263,8 @@
 }
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 16px 40px rgba(91, 107, 255, 0.6);
-  filter: brightness(1.08);
+  box-shadow: 0 16px 44px rgba(201, 164, 122, 0.6);
+  filter: brightness(1.06);
 }
 .btn-primary:active:not(:disabled) {
   transform: translateY(0) scale(0.99);
@@ -333,8 +318,8 @@
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2.5px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
+  border: 2.5px solid rgba(32, 20, 13, 0.3);
+  border-top-color: #20140d;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -342,154 +327,19 @@
   width: 42px;
   height: 42px;
   border-width: 4px;
-  border-color: rgba(124, 131, 255, 0.3);
+  border-color: rgba(201, 164, 122, 0.3);
   border-top-color: var(--a-accent);
 }
 .page-loader {
   position: relative;
   z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
-   Dashboard (legacy landing styles)
-   ══════════════════════════════════════════════════════════════════════════ */
-.dash {
-  align-items: flex-start;
-  flex-direction: column;
-  padding: 0;
-}
-.dash__header {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px clamp(20px, 5vw, 48px);
-  background: rgba(255, 255, 255, 0.03);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-.dash__header .auth-brand {
-  margin-bottom: 0;
-}
-.dash__user {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.dash__avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  color: #fff;
-  background: linear-gradient(135deg, var(--a-accent-2), var(--a-accent));
-  box-shadow: 0 6px 16px rgba(91, 140, 255, 0.45);
-}
-.dash__name {
-  font-weight: 600;
-  font-size: 14.5px;
-}
-
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 15px;
-  border-radius: 11px;
-  font-weight: 600;
-  font-size: 13.5px;
-  color: var(--a-text);
-  cursor: pointer;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  transition: background 0.2s, transform 0.15s, border-color 0.2s;
-}
-.btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(124, 131, 255, 0.45);
-  transform: translateY(-1px);
-}
-
-.dash__main {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: clamp(28px, 6vw, 56px) clamp(20px, 5vw, 48px);
-}
-.dash__greeting {
-  font-size: clamp(28px, 5vw, 40px);
-  font-weight: 800;
-  letter-spacing: -1px;
-  margin: 0 0 8px;
-}
-.dash__sub {
-  color: var(--a-text-dim);
-  margin: 0 0 36px;
-  font-size: 15px;
-}
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
-}
-.feature-card {
-  padding: 24px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 16px 40px rgba(5, 7, 26, 0.4);
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-.feature-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(124, 131, 255, 0.5);
-  box-shadow: 0 24px 52px rgba(91, 107, 255, 0.28);
-}
-.feature-card__icon {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  margin-bottom: 14px;
-  color: var(--a-accent-soft);
-  background: rgba(124, 131, 255, 0.14);
-  border: 1px solid rgba(124, 131, 255, 0.26);
-}
-.feature-card__title {
-  margin: 0 0 4px;
-  font-size: 17px;
-  font-weight: 700;
-}
-.feature-card__desc {
-  margin: 0 0 14px;
-  color: var(--a-text-dim);
-  font-size: 13.5px;
-}
-.feature-card__badge {
-  display: inline-block;
-  padding: 4px 10px;
-  font-size: 11.5px;
-  font-weight: 600;
-  border-radius: 999px;
-  color: var(--a-accent-soft);
-  background: rgba(124, 131, 255, 0.16);
-  border: 1px solid rgba(124, 131, 255, 0.32);
+  to { transform: rotate(360deg); }
 }
 
 /* ── OTP input ───────────────────────────────────────────────────────────── */
@@ -515,11 +365,11 @@
 .otp-box:focus {
   border-color: var(--a-accent);
   background: var(--a-glass-2);
-  box-shadow: 0 0 0 4px rgba(124, 131, 255, 0.18);
+  box-shadow: 0 0 0 4px rgba(201, 164, 122, 0.2);
 }
 .otp-box--filled {
-  border-color: rgba(124, 131, 255, 0.55);
-  background: rgba(124, 131, 255, 0.1);
+  border-color: rgba(201, 164, 122, 0.55);
+  background: rgba(201, 164, 122, 0.12);
 }
 
 .otp-resend {
@@ -545,7 +395,7 @@
   transition: background 0.2s;
 }
 .otp-resend__btn:hover {
-  background: rgba(124, 131, 255, 0.12);
+  background: rgba(201, 164, 122, 0.14);
 }
 
 .btn-back {
@@ -566,7 +416,7 @@
 }
 .btn-back:hover {
   color: var(--a-text);
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: rgba(201, 164, 122, 0.4);
   background: rgba(255, 255, 255, 0.04);
 }
 
@@ -575,13 +425,12 @@
   color: var(--a-accent-soft);
   font-weight: 600;
 }
-
 .verified-email-badge {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: rgba(124, 131, 255, 0.12);
-  border: 1px solid rgba(124, 131, 255, 0.3);
+  background: rgba(201, 164, 122, 0.12);
+  border: 1px solid rgba(201, 164, 122, 0.3);
   color: var(--a-accent-soft);
   font-size: 13px;
   font-weight: 500;
@@ -591,26 +440,20 @@
   box-sizing: border-box;
 }
 
-/* ── Responsive tweaks ───────────────────────────────────────────────────── */
+/* ── Responsive: collapse the image panel ───────────────────────────────── */
+@media (max-width: 880px) {
+  .auth-visual { display: none; }
+  .auth-panel { flex: 1 1 100%; }
+}
 @media (max-width: 480px) {
-  .auth-card {
-    padding: 32px 22px;
-  }
-  .auth-title {
-    font-size: 23px;
-  }
-  .dash__name {
-    display: none; /* keep the header tidy on small phones */
-  }
+  .auth-panel { padding: 28px 18px; }
+  .auth-title { font-size: 23px; }
 }
 
 /* Respect users who prefer less motion */
 @media (prefers-reduced-motion: reduce) {
-  .orb,
-  .auth-card {
+  .auth-formwrap,
+  .auth-brand__img {
     animation: none;
-  }
-  .auth-card {
-    transition: none;
   }
 }

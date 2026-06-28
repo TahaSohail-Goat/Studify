@@ -12,6 +12,10 @@ import authRoutes from "./routes/auth.js";  // register / login routes
 import notesRoutes from "./routes/notes.js"; // notes upload / list / delete routes
 import chatRoutes from "./routes/chat.js";  // AI chat routes
 import summariesRoutes from "./routes/summaries.js"; // AI summaries routes
+import quizzesRoutes from "./routes/quizzes.js"; // AI quiz routes
+import ragRoutes from "./routes/rag.js"; // RAG index status / reindex routes
+import analyticsRoutes from "./routes/analytics.js"; // analytics + AI insights
+import { warmEmbeddings } from "./utils/embeddings.js"; // preload the embedding model
 
 // Ensure the uploads directory (and the public avatars sub-folder) exist on boot.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -55,9 +59,19 @@ app.use("/api/auth", authRoutes);
 app.use("/api/notes", notesRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/summaries", summariesRoutes);
+app.use("/api/quizzes", quizzesRoutes);
+app.use("/api/rag", ragRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // ── Start listening ──────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
   console.log(`   Try the health check: http://localhost:${PORT}/api/health`);
+
+  // Preload the embedding model in the background (first call downloads ~30 MB,
+  // then it's cached). This keeps the first RAG chat fast.
+  console.log("⏳ Warming up the embedding model (first run downloads it)…");
+  warmEmbeddings().then((ok) => {
+    if (ok) console.log("🧠 Embedding model ready — RAG search is live.");
+  });
 });
