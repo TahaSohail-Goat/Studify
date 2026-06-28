@@ -63,6 +63,23 @@ function groqKey() {
   return key;
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// How long to wait before retrying a rate-limited (429) or overloaded (503)
+// request. Groq sends a `retry-after` header (seconds); otherwise we back off
+// exponentially. Capped so a user never waits absurdly long.
+function retryDelayMs(res, attempt) {
+  const header = res.headers.get("retry-after");
+  if (header) {
+    const secs = Number(header);
+    if (!Number.isNaN(secs)) return Math.min(secs * 1000 + 250, 20000);
+  }
+  return Math.min(1000 * 2 ** attempt, 20000); // 1s, 2s, 4s, 8s … (max 20s)
+}
+
+const MAX_RETRIES = 4;
+const isRetryable = (status) => status === 429 || status === 503;
+
 // Groq is OpenAI-compatible: a flat messages array with roles system/user/assistant.
 // Pass `system` to override the default Studify persona (e.g. JSON-only tasks).
 function toGroqMessages(messages, system) {
@@ -86,11 +103,21 @@ export async function chatComplete(modelId, messages, options = {}) {
   if (options.maxTokens != null) body.max_tokens = options.maxTokens;
   if (options.responseFormat) body.response_format = options.responseFormat;
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify(body),
-  });
+  // Retry on rate-limit/overload so a burst of calls (summaries, quizzes) rides
+  // out Groq's per-minute cap instead of failing the whole operation.
+  let res;
+  for (let attempt = 0; ; attempt++) {
+    res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify(body),
+    });
+    if (isRetryable(res.status) && attempt < MAX_RETRIES) {
+      await sleep(retryDelayMs(res, attempt));
+      continue;
+    }
+    break;
+  }
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(friendlyError(res.status, data));
@@ -108,16 +135,24 @@ export async function chatStream(modelId, messages, onChunk, signal, options = {
   const key = groqKey();
 
   let res;
-  try {
-    res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: modelId, stream: true, messages: toGroqMessages(messages, options.system) }),
-      signal,
-    });
-  } catch (err) {
-    if (err.name === "AbortError") return ""; // stopped before any reply
-    throw err;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ model: modelId, stream: true, messages: toGroqMessages(messages, options.system) }),
+        signal,
+      });
+    } catch (err) {
+      if (err.name === "AbortError") return ""; // stopped before any reply
+      throw err;
+    }
+    // Only safe to retry before we've started reading the stream.
+    if (isRetryable(res.status) && attempt < MAX_RETRIES) {
+      await sleep(retryDelayMs(res, attempt));
+      continue;
+    }
+    break;
   }
 
   if (!res.ok) {
