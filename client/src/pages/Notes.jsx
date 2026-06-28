@@ -1,13 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Upload, FileText, Image, FileType, Trash2,
-  Download, BookOpen, AlertCircle, CheckCircle,
+  Download, BookOpen, AlertCircle, CheckCircle, Presentation,
 } from "lucide-react";
 import AppLayout from "../components/AppLayout.jsx";
 import { getNotesApi, uploadNoteApi, deleteNoteApi, downloadNoteApi } from "../api/notes.js";
 
-const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp", "text/plain"];
-const MAX_BYTES = 10 * 1024 * 1024;
+const ALLOWED_TYPES = [
+  "application/pdf", "image/jpeg", "image/png", "image/webp", "text/plain",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",    // .docx
+];
+// Office files can come through as application/octet-stream, so accept by ext too.
+const ALLOWED_EXT = /\.(pdf|jpe?g|png|webp|txt|pptx|docx)$/i;
+const isAllowedFile = (file) => ALLOWED_TYPES.includes(file.type) || ALLOWED_EXT.test(file.name || "");
+const MAX_BYTES = 15 * 1024 * 1024;
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -21,9 +28,10 @@ function formatDate(iso) {
   });
 }
 
-function FileIcon({ mimetype }) {
+function FileIcon({ mimetype, name = "" }) {
   if (mimetype?.startsWith("image/")) return <Image size={20} />;
-  if (mimetype === "application/pdf") return <FileType size={20} />;
+  if (mimetype === "application/pdf" || /\.pdf$/i.test(name)) return <FileType size={20} />;
+  if (mimetype?.includes("presentation") || /\.pptx$/i.test(name)) return <Presentation size={20} />;
   return <FileText size={20} />;
 }
 
@@ -54,12 +62,12 @@ export default function Notes() {
     const file = files[0];
     if (!file) return;
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("Only PDF, JPG, PNG, WEBP, and TXT files are allowed.");
+    if (!isAllowedFile(file)) {
+      setError("Only PDF, PowerPoint, Word, image, and text files are allowed.");
       return;
     }
     if (file.size > MAX_BYTES) {
-      setError("File must be under 10 MB.");
+      setError("File must be under 15 MB.");
       return;
     }
 
@@ -113,7 +121,7 @@ export default function Notes() {
       <div className="notes-page">
         <div className="page-header">
           <h1>My Notes</h1>
-          <p>Upload PDFs, images, or text files to power your AI study assistant.</p>
+          <p>Upload PDFs, slides, Word docs, images, or text files to power your AI study assistant.</p>
         </div>
 
         {/* ── Alert banners ───────────────────────────────────────────────── */}
@@ -147,7 +155,7 @@ export default function Notes() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.webp,.txt"
+            accept=".pdf,.pptx,.docx,.jpg,.jpeg,.png,.webp,.txt"
             style={{ display: "none" }}
             onChange={(e) => handleFiles(e.target.files)}
           />
@@ -166,7 +174,7 @@ export default function Notes() {
                 <strong>Click to upload</strong> or drag and drop
               </p>
               <p className="upload-zone__hint">
-                PDF · JPG · PNG · WEBP · TXT &nbsp;·&nbsp; Max 10 MB
+                PDF · PPTX · DOCX · JPG · PNG · WEBP · TXT &nbsp;·&nbsp; Max 15 MB
               </p>
             </>
           )}
@@ -189,7 +197,7 @@ export default function Notes() {
               {notes.map((note) => (
                 <div key={note._id} className="note-card">
                   <div className="note-card__icon">
-                    <FileIcon mimetype={note.mimetype} />
+                    <FileIcon mimetype={note.mimetype} name={note.originalName} />
                   </div>
 
                   <div className="note-card__info">

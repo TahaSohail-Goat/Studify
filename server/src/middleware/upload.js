@@ -15,7 +15,12 @@ const ALLOWED_MIMETYPES = new Set([
   "image/png",
   "image/webp",
   "text/plain",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",    // .docx
 ]);
+// Office files are sometimes reported as application/octet-stream, so we also
+// accept by extension.
+const ALLOWED_EXTS = new Set([".pdf", ".jpg", ".jpeg", ".png", ".webp", ".txt", ".pptx", ".docx"]);
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
@@ -27,12 +32,13 @@ const storage = multer.diskStorage({
 
 export const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB
   fileFilter: (_req, file, cb) => {
-    if (ALLOWED_MIMETYPES.has(file.mimetype)) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ALLOWED_MIMETYPES.has(file.mimetype) || ALLOWED_EXTS.has(ext)) {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF, JPG, PNG, WEBP, and TXT files are allowed."));
+      cb(new Error("Only PDF, PowerPoint, Word, image, and text files are allowed."));
     }
   },
 });
