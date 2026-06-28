@@ -40,10 +40,17 @@ app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5000;
 
 // ── Middleware: code that runs on every incoming request ─────────────────────
-// In production, only allow the deployed frontend origin.
-// Set CLIENT_ORIGIN in your server's environment variables to your Vercel URL.
+const ALLOWED_ORIGINS = [
+  "https://studify-six.vercel.app",
+  "http://localhost:5173",
+  process.env.CLIENT_ORIGIN,
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    callback(new Error("Not allowed by CORS"));
+  },
   credentials: true,
 }));
 app.use(express.json());  // automatically turn JSON request bodies into JS objects
