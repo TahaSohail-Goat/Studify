@@ -1,9 +1,13 @@
 // ── Studify backend: the entry point of our server ───────────────────────────
 // This file starts a small web server that the React app will talk to.
 
+import dns from "node:dns";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+// Force IPv4 for all outbound connections (Railway free tier blocks IPv6).
+dns.setDefaultResultOrder("ipv4first");
 import express from "express"; // Express = a tiny framework that makes building an HTTP API easy
 import cors from "cors";       // CORS = lets our React app (a different port) call this server safely
 import rateLimit from "express-rate-limit"; // throttles abusive clients
