@@ -40,7 +40,12 @@ app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5000;
 
 // ── Middleware: code that runs on every incoming request ─────────────────────
-app.use(cors());          // allow the browser app to make requests to us
+// In production, only allow the deployed frontend origin.
+// Set CLIENT_ORIGIN in your server's environment variables to your Vercel URL.
+app.use(cors({
+  origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+  credentials: true,
+}));
 app.use(express.json());  // automatically turn JSON request bodies into JS objects
 
 // ── Rate limiters: protect against brute-force / abuse and the shared AI key ──

@@ -1,4 +1,4 @@
-export const API_URL = "http://localhost:5000";
+export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 // Build the public URL for a stored avatar filename (or null if none).
 export function avatarUrl(filename) {
