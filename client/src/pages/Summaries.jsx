@@ -10,7 +10,14 @@ import AppLayout from "../components/AppLayout.jsx";
 import { getNotesApi } from "../api/notes.js";
 import { getSummariesApi, generateSummaryApi, deleteSummaryApi } from "../api/summaries.js";
 
-const SUMMARIZABLE = new Set(["application/pdf", "text/plain"]);
+const SUMMARIZABLE = new Set([
+  "application/pdf",
+  "text/plain",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+const SUMMARIZABLE_EXT = /\.(pdf|txt|pptx|docx)$/i;
+const canSummarize = (n) => SUMMARIZABLE.has(n.mimetype) || SUMMARIZABLE_EXT.test(n.originalName || "");
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -59,7 +66,7 @@ export default function Summaries() {
     setLoading(true);
     try {
       const [{ notes }, { summaries }] = await Promise.all([getNotesApi(), getSummariesApi()]);
-      setNotes(notes.filter((n) => SUMMARIZABLE.has(n.mimetype)));
+      setNotes(notes.filter(canSummarize));
       const map = {};
       summaries.forEach((s) => { map[s.noteId] = s; });
       setByNote(map);
