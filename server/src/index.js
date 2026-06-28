@@ -80,6 +80,32 @@ app.use("/api/quizzes", aiLimiter, quizzesRoutes);
 app.use("/api/rag", ragRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
+// ── 404 for any unmatched route — clean JSON, not an HTML page ────────────────
+app.use((req, res) => {
+  res.status(404).json({ message: "Not found." });
+});
+
+// ── Global error handler ──────────────────────────────────────────────────────
+// Centralizes errors so the client always gets clean JSON and never sees a
+// stack trace or server file paths. (Must be last, and must take 4 args for
+// Express to treat it as an error handler.)
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  // Malformed JSON body from express.json()
+  if (err.type === "entity.parse.failed" || err instanceof SyntaxError) {
+    return res.status(400).json({ message: "Invalid JSON in the request body." });
+  }
+  // Body larger than the configured limit
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({ message: "Request body is too large." });
+  }
+  console.error("unhandled error:", err.stack || err.message);
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    message: status === 500 ? "Something went wrong on our end." : err.message,
+  });
+});
+
 // ── Start listening ──────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
