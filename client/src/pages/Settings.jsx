@@ -611,7 +611,14 @@ export default function Settings() {
         </SCard>
 
         {/* ── 6. Storage ──────────────────────────────────────────────────── */}
-        <SCard title="Storage" subtitle="Files you upload count toward your 100 MB limit.">
+        <SCard
+          title="Storage"
+          subtitle={
+            storage
+              ? `Files you upload count toward your ${formatBytes(storage.limitBytes)} limit.`
+              : "Files you upload count toward your storage limit."
+          }
+        >
           {storage ? (
             <>
               <div className="storage-track">

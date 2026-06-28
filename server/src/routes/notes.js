@@ -11,7 +11,8 @@ import { indexNote } from "../utils/rag.js";
 
 const router = express.Router();
 
-const STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB per user
+const STORAGE_LIMIT = 400 * 1024 * 1024; // 400 MB per user
+const STORAGE_LIMIT_MB = Math.round(STORAGE_LIMIT / (1024 * 1024));
 
 // ── POST /api/notes/upload ─────────────────────────────────────────────────────
 router.post("/upload", requireAuth, (req, res, next) => {
@@ -29,7 +30,7 @@ router.post("/upload", requireAuth, (req, res, next) => {
     if (used + req.file.size > STORAGE_LIMIT) {
       fs.unlink(path.join(UPLOADS_DIR, req.file.filename), () => {});
       return res.status(413).json({
-        message: "You've reached your 100 MB storage limit. Delete some files and try again.",
+        message: `You've reached your ${STORAGE_LIMIT_MB} MB storage limit. Delete some files and try again.`,
       });
     }
 
@@ -56,7 +57,7 @@ router.get("/storage", requireAuth, async (req, res) => {
   try {
     const notes = await Note.find({ userId: req.userId }, "size");
     const totalBytes = notes.reduce((sum, n) => sum + n.size, 0);
-    res.json({ totalBytes, count: notes.length, limitBytes: 100 * 1024 * 1024 });
+    res.json({ totalBytes, count: notes.length, limitBytes: STORAGE_LIMIT });
   } catch (err) {
     console.error("storage error:", err.message);
     res.status(500).json({ message: "Could not get storage info." });

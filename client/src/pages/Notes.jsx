@@ -14,7 +14,7 @@ const ALLOWED_TYPES = [
 // Office files can come through as application/octet-stream, so accept by ext too.
 const ALLOWED_EXT = /\.(pdf|jpe?g|png|webp|txt|pptx|docx)$/i;
 const isAllowedFile = (file) => ALLOWED_TYPES.includes(file.type) || ALLOWED_EXT.test(file.name || "");
-const MAX_BYTES = 15 * 1024 * 1024;
+const MAX_BYTES = 50 * 1024 * 1024;
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -67,7 +67,7 @@ export default function Notes() {
       return;
     }
     if (file.size > MAX_BYTES) {
-      setError("File must be under 15 MB.");
+      setError("File must be under 50 MB.");
       return;
     }
 
@@ -174,7 +174,7 @@ export default function Notes() {
                 <strong>Click to upload</strong> or drag and drop
               </p>
               <p className="upload-zone__hint">
-                PDF · PPTX · DOCX · JPG · PNG · WEBP · TXT &nbsp;·&nbsp; Max 15 MB
+                PDF · PPTX · DOCX · JPG · PNG · WEBP · TXT &nbsp;·&nbsp; Max 50 MB
               </p>
             </>
           )}
