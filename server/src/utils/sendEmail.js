@@ -1,13 +1,27 @@
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Email sending via Brevo's HTTP API (https://www.brevo.com).
+// We use the HTTP API (not SMTP) because cloud hosts like Railway's free tier
+// block outbound SMTP/IPv6 — but plain HTTPS always works.
+//
+// Required env vars:
+//   BREVO_API_KEY — your Brevo API key (starts with "xkeysib-")
+//   EMAIL_USER    — the verified sender email (your Gmail you signed up to Brevo with)
 
 export async function sendOtpEmail(toEmail, code) {
-  await resend.emails.send({
-    from: "Studify <onboarding@resend.dev>",
-    to: toEmail,
-    subject: "Your Studify verification code",
-    html: `
+  const sender = process.env.EMAIL_USER;
+  const apiKey = process.env.BREVO_API_KEY;
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: "Studify", email: sender },
+      to: [{ email: toEmail }],
+      subject: "Your Studify verification code",
+      htmlContent: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -60,5 +74,12 @@ export async function sendOtpEmail(toEmail, code) {
   </table>
 </body>
 </html>`,
+    }),
   });
+
+  // Brevo returns a non-2xx status with a JSON error if something is wrong.
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Brevo send failed (${res.status}): ${detail}`);
+  }
 }
