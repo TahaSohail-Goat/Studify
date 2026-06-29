@@ -7,10 +7,12 @@
 // and hands back plain text — either all at once (chatComplete) or streamed
 // token-by-token (chatStream).
 
-// Models we offer in the UI. To add/swap one, edit this list.
+// Models we offer in the UI. The FIRST entry is the default in chat (the client
+// selects the first available model). 8B is default — it's fast and has much
+// higher Groq rate limits; 70B is there for when you want the smartest answers.
 const MODELS = [
-  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B", provider: "groq" },
   { id: "llama-3.1-8b-instant",    label: "Llama 3.1 8B",  provider: "groq" },
+  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B", provider: "groq" },
 ];
 
 // The "personality" given to the model so replies feel on-brand for Studify.
