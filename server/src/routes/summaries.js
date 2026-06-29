@@ -52,35 +52,47 @@ function splitSegments(text, size) {
 }
 
 const SUMMARY_SYSTEM =
-  "You are a study assistant that writes accurate, well-structured summaries of a student's " +
-  "material. Summarize ONLY what is in the provided text — never invent facts. Use clear Markdown.";
+  "You are an expert study assistant that writes clear, thorough, exam-ready summaries of a " +
+  "student's material. Your summary must be detailed enough that a student could revise from it " +
+  "WITHOUT re-reading the original. Summarize ONLY what is in the provided text — never invent " +
+  "facts, numbers, or definitions. Preserve the concrete details that matter for studying: " +
+  "definitions, key numbers, formulas, names, dates, examples, and cause-and-effect relationships. " +
+  "Write full, informative sentences — never vague one-word fragments or generic filler. Use clear Markdown.";
 
 function finalPrompt(text) {
   return (
-    "Summarize the following study material for a student. Respond in Markdown using exactly " +
-    "these section headings:\n\n" +
-    "## Overview\n2-3 sentences capturing the main idea.\n\n" +
-    "## Key Points\nA concise bullet list of the most important ideas.\n\n" +
-    "## Key Terms\nA bullet list of **term** — short definition (include only if the material has notable terms).\n\n" +
-    "Material:\n---\n" + text
+    "Write a study summary of the following material for a student revising for an exam. Be specific " +
+    "and substantive — every line should teach something concrete. Avoid vague, generic statements. " +
+    "Respond in Markdown using exactly these section headings:\n\n" +
+    "## Overview\n3-4 sentences explaining what the material covers and why it matters.\n\n" +
+    "## Key Points\nA detailed bullet list of the most important ideas. Each bullet must be a complete, " +
+    "informative sentence that actually explains the idea — include the specific facts, numbers, examples, " +
+    "and reasoning from the text, not just keywords. Cover all the major topics; group related points together.\n\n" +
+    "## Key Terms\nA bullet list of **term** — a clear, self-contained definition. Include every important " +
+    "term, concept, or formula in the material (omit this section only if there genuinely are none).\n\n" +
+    "Be comprehensive but do not repeat yourself. Material:\n---\n" + text
   );
 }
 
 function segmentPrompt(text, i, n) {
   return (
-    `This is part ${i} of ${n} of a longer document. Pull out the key information from THIS part ` +
-    "as a concise bullet list of the important facts, ideas, and terms. Use only what's in the text.\n\n" +
+    `This is part ${i} of ${n} of a longer document. Extract ALL the important information from THIS part ` +
+    "as a detailed bullet list — key ideas, facts, definitions, numbers, formulas, names, and examples. " +
+    "Keep the specifics; do not generalize or drop details. Use only what's in the text.\n\n" +
     "---\n" + text
   );
 }
 
 function combinePrompt(noteBlocks) {
   return (
-    "Below are notes taken from consecutive parts of one document. Merge them into a single, " +
-    "de-duplicated study summary in Markdown using exactly these headings:\n\n" +
-    "## Overview\n2-3 sentences.\n\n## Key Points\nbullet list of the most important ideas.\n\n" +
-    "## Key Terms\nbullet list of **term** — definition (only if there are notable terms).\n\n" +
-    "Notes:\n---\n" + noteBlocks
+    "Below are detailed notes taken from consecutive parts of one document. Merge them into a single, " +
+    "de-duplicated, exam-ready study summary in Markdown using exactly these headings:\n\n" +
+    "## Overview\n3-4 sentences explaining what the material covers and why it matters.\n\n" +
+    "## Key Points\nA detailed bullet list. Each bullet must be a complete, informative sentence that " +
+    "explains the idea with its specific facts, numbers, and examples — not just keywords. Cover all major " +
+    "topics and group related points together.\n\n" +
+    "## Key Terms\nA bullet list of **term** — a clear definition (omit only if there genuinely are none).\n\n" +
+    "Preserve the specific details from the notes; do not water them down. Notes:\n---\n" + noteBlocks
   );
 }
 
@@ -100,7 +112,7 @@ async function generateSummary(fullText) {
       const part = await chatComplete(
         MAP_MODEL,
         [{ role: "user", content: segmentPrompt(segments[i], i + 1, segments.length) }],
-        { system: SUMMARY_SYSTEM, maxTokens: 900 }
+        { system: SUMMARY_SYSTEM, maxTokens: 1300 }
       );
       partials.push(`### Part ${i + 1}\n${part}`);
     } catch (err) {
