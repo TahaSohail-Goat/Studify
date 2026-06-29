@@ -4,7 +4,7 @@ import { Summary } from "../models/Summary.js";
 import { UPLOADS_DIR } from "../middleware/upload.js";
 import { requireAuth } from "../middleware/auth.js";
 import { chatComplete } from "../utils/aiProviders.js";
-import { extractNoteText, isIndexable } from "../utils/extractText.js";
+import { extractNoteText, isIndexable, INDEXABLE_LABEL } from "../utils/extractText.js";
 
 const router = express.Router();
 router.use(requireAuth);
@@ -146,7 +146,7 @@ router.post("/:noteId", async (req, res) => {
     if (note.userId.toString() !== req.userId)
       return res.status(403).json({ message: "Access denied." });
     if (!isIndexable(note.mimetype, note.originalName))
-      return res.status(400).json({ message: "Only PDF, PowerPoint, Word, and text files can be summarized." });
+      return res.status(400).json({ message: `Only ${INDEXABLE_LABEL} files can be summarized.` });
 
     // 1. Extract + clean the text from the file.
     let text;

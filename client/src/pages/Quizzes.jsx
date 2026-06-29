@@ -14,8 +14,11 @@ const SUMMARIZABLE = new Set([
   "text/plain",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
 ]);
-const SUMMARIZABLE_EXT = /\.(pdf|txt|pptx|docx)$/i;
+const SUMMARIZABLE_EXT = /\.(pdf|txt|pptx|docx|jpe?g|png|webp)$/i;
 const canQuiz = (n) => SUMMARIZABLE.has(n.mimetype) || SUMMARIZABLE_EXT.test(n.originalName || "");
 const DEFAULT_CFG = { mcqCount: 50, moreMcq: 10 };
 

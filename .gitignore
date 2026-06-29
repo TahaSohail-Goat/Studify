@@ -14,6 +14,9 @@ node_modules/
 dist/
 build/
 
+# OCR language models — downloaded by tesseract.js at runtime, never committed
+*.traineddata
+
 # Logs
 *.log
 npm-debug.log*

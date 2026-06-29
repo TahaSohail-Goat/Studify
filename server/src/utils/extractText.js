@@ -7,16 +7,25 @@ import fs from "node:fs";
 import path from "node:path";
 import AdmZip from "adm-zip";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
+import { ocrImageFile, ocrPdfBuffer } from "./ocr.js";
 
 // File types we can turn into text (and therefore index for RAG, summarize, quiz).
+// Images and scanned PDFs are handled via OCR (see extractNoteText below).
 export const INDEXABLE_MIMETYPES = new Set([
   "application/pdf",
   "text/plain",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",    // .docx
+  "image/jpeg",
+  "image/png",
+  "image/webp",
 ]);
 
-const INDEXABLE_EXTS = new Set([".pdf", ".txt", ".pptx", ".docx"]);
+const INDEXABLE_EXTS = new Set([".pdf", ".txt", ".pptx", ".docx", ".jpg", ".jpeg", ".png", ".webp"]);
+
+// Below this many characters from a PDF's text layer, we assume it's a scan
+// (images of pages) and fall back to OCR.
+const MIN_PDF_TEXT = 20;
 
 // Some browsers/OSes report Office files as application/octet-stream, so we also
 // accept by extension.
@@ -26,7 +35,9 @@ export function isIndexable(mimetype = "", originalName = "") {
 }
 
 // Friendly list for upload UIs / error messages.
-export const INDEXABLE_LABEL = "PDF, PowerPoint, Word, or text";
+export const INDEXABLE_LABEL = "PDF, PowerPoint, Word, image, or text";
+
+const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 
 // ── XML helpers ───────────────────────────────────────────────────────────────
 function decodeEntities(s) {
@@ -91,8 +102,12 @@ export async function extractNoteText(note, uploadsDir) {
   const mt = note.mimetype || "";
 
   if (ext === ".pdf" || mt === "application/pdf") {
-    const data = await pdfParse(fs.readFileSync(filePath));
-    return data.text || "";
+    const buffer = fs.readFileSync(filePath);
+    const data = await pdfParse(buffer);
+    const text = (data.text || "").trim();
+    if (text.length >= MIN_PDF_TEXT) return text;
+    // Almost no text layer → likely a scanned PDF. Read it with OCR instead.
+    return await ocrPdfBuffer(buffer);
   }
   if (ext === ".txt" || mt === "text/plain") {
     return fs.readFileSync(filePath, "utf-8");
@@ -102,6 +117,9 @@ export async function extractNoteText(note, uploadsDir) {
   }
   if (ext === ".docx" || mt.includes("wordprocessingml")) {
     return extractDocx(filePath);
+  }
+  if (IMAGE_EXTS.has(ext) || mt.startsWith("image/")) {
+    return await ocrImageFile(filePath);
   }
   return "";
 }
