@@ -26,11 +26,16 @@ const PROVIDERS = [
   { name: "cerebras", url: "https://api.cerebras.ai/v1/chat/completions",     keyEnv: "CEREBRAS_API_KEY" },
 ];
 
-// Cerebras names its models slightly differently — map our canonical ids across.
-// (If Cerebras renames a model, update it here; Groq stays primary regardless.)
+// Map our canonical (Groq) model ids to the equivalent Cerebras model ids used
+// on the fallback. As of mid-2026 Cerebras deprecated Llama 3.3 70B, so our "70B"
+// tier falls back to their strongest production model (gpt-oss-120b). The 8B tier
+// maps to Cerebras's llama3.1-8b. Verify against https://inference-docs.cerebras.ai
+// if a fallback ever 404s. NOTE: the Cerebras free tier caps context at ~8K tokens,
+// so very large fallback requests (big summaries/quizzes) may be rejected — Groq
+// stays primary, so this only bites when Groq is also exhausted.
 const CEREBRAS_MODEL_IDS = {
   "llama-3.1-8b-instant":    "llama3.1-8b",
-  "llama-3.3-70b-versatile": "llama-3.3-70b",
+  "llama-3.3-70b-versatile": "gpt-oss-120b",
 };
 
 // The "personality" given to the model so replies feel on-brand for Studify.
