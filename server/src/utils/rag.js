@@ -1,4 +1,5 @@
 // ── RAG: index notes into searchable chunks, then retrieve the relevant ones ───
+import mongoose from "mongoose";
 import { Note } from "../models/Note.js";
 import { Chunk } from "../models/Chunk.js";
 import { UPLOADS_DIR } from "../middleware/upload.js";
@@ -8,6 +9,10 @@ import { extractNoteText, isIndexable } from "./extractText.js";
 const MAX_SOURCE_CHARS = 40000; // cap how much of a note we index
 const MAX_CHUNKS = 80;          // and how many chunks per note
 const MIN_SCORE = 0.18;         // ignore retrieved chunks below this similarity
+
+// Name of the Atlas Vector Search index on the `chunks` collection (created in
+// the Atlas UI). Override with VECTOR_INDEX if you named it differently.
+const VECTOR_INDEX = process.env.VECTOR_INDEX || "chunk_vector_index";
 
 // Pull plain text out of a stored note (PDF / TXT / PPTX / DOCX). Others → "".
 async function extractText(note) {
@@ -97,19 +102,73 @@ export async function reindexUser(userId, { force = false } = {}) {
   return { indexedNotes, totalChunks };
 }
 
+let warnedVectorFallback = false;
+
 /**
  * Retrieve the top-k chunks most similar to `query` across the user's notes.
  * Returns [{ text, noteName, noteId, score }] sorted by relevance.
  *
- * NOTE: we load the user's chunks and score them in memory. That's perfect for a
- * personal study app; at large scale you'd push this into a vector database.
+ * Primary path: MongoDB Atlas Vector Search ($vectorSearch) — an indexed
+ * nearest-neighbour search the database runs for us, pre-filtered to this user.
+ * If the vector index isn't available (not created yet, or a local-dev MongoDB
+ * that doesn't support $vectorSearch), we transparently fall back to scoring the
+ * user's chunks in memory — so retrieval never breaks.
  */
 export async function retrieve(userId, query, k = 5) {
   if (!query || !query.trim()) return [];
+  const qVec = await embed(query);
+
+  try {
+    return await retrieveAtlas(userId, qVec, k);
+  } catch (err) {
+    if (!warnedVectorFallback) {
+      warnedVectorFallback = true;
+      console.warn(
+        `Atlas Vector Search unavailable (${err.message}); using in-memory retrieval. ` +
+        `Create the "${VECTOR_INDEX}" vector index on the chunks collection to enable it.`
+      );
+    }
+    return retrieveInMemory(userId, qVec, k);
+  }
+}
+
+// Indexed nearest-neighbour search in the database, pre-filtered to this user's
+// chunks. Requires a vectorSearch index named VECTOR_INDEX with `embedding` as the
+// vector field and `userId` as a filter field.
+async function retrieveAtlas(userId, qVec, k) {
+  const uid = new mongoose.Types.ObjectId(userId);
+  const hits = await Chunk.aggregate([
+    {
+      $vectorSearch: {
+        index: VECTOR_INDEX,
+        path: "embedding",
+        queryVector: qVec,
+        numCandidates: Math.max(150, k * 30),
+        limit: k,
+        filter: { userId: uid },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        text: 1,
+        noteName: 1,
+        noteId: 1,
+        score: { $meta: "vectorSearchScore" },
+      },
+    },
+  ]);
+  // Atlas reports cosine as (1 + rawCosine) / 2 — convert back so the MIN_SCORE
+  // threshold means the same thing as on the in-memory path.
+  return hits
+    .map((h) => ({ text: h.text, noteName: h.noteName, noteId: h.noteId, score: h.score * 2 - 1 }))
+    .filter((h) => h.score >= MIN_SCORE);
+}
+
+// Fallback: load the user's chunks and score them in memory (linear scan).
+async function retrieveInMemory(userId, qVec, k) {
   const chunks = await Chunk.find({ userId }).select("text noteName noteId embedding");
   if (!chunks.length) return [];
-
-  const qVec = await embed(query);
   const scored = chunks.map((c) => ({
     text: c.text,
     noteName: c.noteName,
